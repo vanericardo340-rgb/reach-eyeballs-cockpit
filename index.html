@@ -1,0 +1,2510 @@
+<meta charset="utf-8" />
+<title>Reach Eyeballs Cockpit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --bg:#ffffff; --bg-elevated:#ffffff; --surface:#f4f2ed; --surface-2:#ebe8e1;
+    --border:#e7e4db; --border-soft:#eeece4;
+    --text:#17161f; --text-dim:#57565f; --text-faint:#8f8d94;
+    --accent:#6c4fe0; --accent-strong:#5b3fd1; --accent-soft:rgba(108,79,224,.10);
+    --accent2:#e0883e; --accent2-soft:rgba(224,136,62,.12);
+    --good:#1a9d6c; --good-soft:rgba(26,157,108,.10);
+    --bad:#d8433a; --bad-soft:rgba(216,67,58,.09);
+    --warn:#c97a1f; --warn-soft:rgba(224,136,62,.14);
+    --radius:16px; --radius-sm:10px;
+    --shadow: 0 1px 2px rgba(23,22,31,.04), 0 10px 26px -16px rgba(23,22,31,.16);
+  }
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  svg{ width:16px; height:16px; display:inline-block; vertical-align:middle; flex-shrink:0; }
+  .badge svg{ width:10px; height:10px; }
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    font-size:13.5px; line-height:1.45; -webkit-font-smoothing:antialiased;
+    font-feature-settings:"tnum" 1,"cv11" 1;
+  }
+  .tnum{ font-variant-numeric:tabular-nums; }
+  h1,h2,h3{ margin:0; font-weight:600; text-wrap:balance; }
+  button{ font-family:inherit; }
+  a{ color:inherit; }
+  ::selection{ background:var(--accent-soft); }
+  input,select,textarea{
+    font-family:inherit; font-size:13px; color:var(--text); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:8px; padding:8px 10px; outline:none;
+  }
+  input:focus,select:focus,textarea:focus,button:focus-visible{
+    border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  button{ cursor:pointer; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background:var(--surface-2); border-radius:8px; border:2px solid var(--bg); }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  .app{ display:flex; min-height:100vh; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:238px; flex-shrink:0; background:var(--bg-elevated); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; padding:20px 18px 16px; }
+  .brand-mark{
+    width:32px; height:32px; border-radius:9px; flex-shrink:0;
+    background:linear-gradient(145deg,var(--accent),var(--accent2));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px;
+  }
+  .brand-name{ font-weight:700; font-size:14.5px; letter-spacing:-.01em; }
+  .brand-sub{ font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; margin-top:1px; }
+  nav.navlist{ padding:8px 12px; display:flex; flex-direction:column; gap:2px; }
+  .navitem{
+    display:flex; align-items:center; gap:11px; padding:9px 11px; border-radius:9px;
+    color:var(--text-dim); background:transparent; border:1px solid transparent; text-align:left; width:100%;
+  }
+  .nav-ic{ width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .nav-ic svg{ width:15px; height:15px; }
+  .navitem .t{ display:flex; flex-direction:column; }
+  .navitem .t b{ font-size:13px; font-weight:600; color:inherit; }
+  .navitem .t span{ font-size:10.5px; color:var(--text-faint); }
+  .navitem:hover{ background:var(--surface); color:var(--text); }
+  .navitem.active{ background:var(--accent-soft); color:var(--text); border-color:rgba(108,79,224,.28); }
+  .navitem .badge-dot{
+    margin-left:auto; min-width:17px; height:17px; padding:0 5px; border-radius:20px; background:var(--bad);
+    color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
+  }
+  .sidebar-foot{ margin-top:auto; padding:14px 16px; border-top:1px solid var(--border); }
+  .user-row{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+  .user-avatar{
+    width:26px; height:26px; border-radius:50%; background:var(--surface-2); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:700; color:var(--text-dim);
+  }
+  .user-email{ font-size:11.5px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .storage-note{ font-size:10.5px; color:var(--text-faint); line-height:1.5; }
+  .storage-note button{ background:none; border:none; color:var(--accent-strong); padding:0; font-size:10.5px; text-decoration:underline; }
+
+  /* ---------- Main ---------- */
+  .main{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .topbar{
+    padding:18px 30px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;
+    align-items:flex-start; gap:16px; flex-wrap:wrap; background:linear-gradient(180deg,var(--bg-elevated),var(--bg));
+  }
+  .topbar h1{ font-size:19px; letter-spacing:-.01em; }
+  .topbar .sub{ font-size:12px; color:var(--text-faint); margin-top:3px; }
+  .topbar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .content{ padding:22px 30px 70px; max-width:1360px; }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border);
+    color:var(--text); padding:8px 13px; border-radius:9px; font-size:12.5px; font-weight:600;
+  }
+  .btn:hover{ background:var(--surface); border-color:#31353f; }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.primary:hover{ background:var(--accent-strong); }
+  .btn.ghost{ background:transparent; border-color:transparent; color:var(--text-dim); }
+  .btn.ghost:hover{ background:var(--surface); color:var(--text); }
+  .btn.danger{ color:var(--bad); }
+  .btn.sm{ padding:5px 9px; font-size:11.5px; }
+  .btn svg{ width:14px; height:14px; }
+
+  .seg{ display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:2px; gap:1px; }
+  .seg button{ background:transparent; border:none; color:var(--text-dim); font-size:11.5px; font-weight:600; padding:6px 10px; border-radius:7px; }
+  .seg button.active{ background:var(--surface); color:var(--text); box-shadow:var(--shadow); }
+
+  .section-label{
+    font-size:12px; color:var(--text-faint); margin-bottom:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .section-label b{ color:var(--text-dim); font-weight:600; }
+
+  /* ---------- Cards / grid ---------- */
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px; }
+  .grid.cols-4{ grid-template-columns:repeat(4,1fr); }
+  .grid.cols-5{ grid-template-columns:repeat(5,1fr); gap:8px; }
+  .grid.cols-2{ grid-template-columns:repeat(2,1fr); }
+  @media (max-width:1080px){ .grid,.grid.cols-4{ grid-template-columns:repeat(2,1fr); } .grid.cols-5{ grid-template-columns:repeat(3,1fr); } }
+  @media (max-width:600px){ .grid,.grid.cols-4,.grid.cols-2,.grid.cols-5{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 17px; position:relative; overflow:hidden;
+  }
+  .card.stat{ display:flex; flex-direction:column; gap:6px; }
+  .card.stat .label{ font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--text-faint); font-weight:700; display:flex; align-items:center; gap:7px; }
+  .card.stat .value-row{ display:flex; align-items:baseline; gap:9px; margin-top:1px; }
+  .card.stat .value{ font-size:27px; font-weight:700; letter-spacing:-.02em; }
+  .card.stat .caption{ font-size:11.5px; color:var(--text-faint); margin-top:1px; }
+  .card.stat .target-line{ font-size:10.5px; color:var(--text-faint); margin-top:6px; padding-top:8px; border-top:1px dashed var(--border-soft); }
+  .card.stat.attn{ border-color:rgba(216,67,58,.32); background:linear-gradient(180deg,rgba(216,67,58,.06),var(--surface)); }
+  .card.stat.rate{
+    padding:11px 13px; gap:3px; border-color:transparent; color:#fff;
+    background:linear-gradient(155deg,#5A5FD9,#4A47C4);
+    box-shadow:0 1px 2px rgba(23,22,31,.04), 0 8px 16px -12px rgba(23,22,31,.3);
+  }
+  .card.stat.rate .label{ font-size:9.5px; color:rgba(255,255,255,.72); gap:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .card.stat.rate .value{ font-size:19px; color:#fff; }
+  .card.stat.rate .value-row{ margin-top:0; }
+  .card.stat.warmth{ border-left:3px solid var(--accent); }
+  .card.stat.hero{
+    border-color:transparent;
+    box-shadow:0 1px 2px rgba(23,22,31,.04), 0 12px 22px -14px rgba(23,22,31,.32);
+  }
+  .card.stat.hero .label{ color:rgba(255,255,255,.74); }
+  .card.stat.hero .value{ color:#fff; }
+  .card.stat.hero .caption{ color:rgba(255,255,255,.7); }
+  .card.stat.hero .cell-muted{ color:rgba(255,255,255,.62); }
+  .card.stat.hero .target-line{ color:rgba(255,255,255,.6); border-top-color:rgba(255,255,255,.22); }
+  /* Rotating purple/plum/orange family so a grid of hero cards doesn't read as one flat block */
+  .card.stat.hero:nth-child(6n+1){ background:linear-gradient(155deg,#7A63E8,#5B3FD1); }
+  .card.stat.hero:nth-child(6n+2){ background:linear-gradient(155deg,#9D7CF2,#7458DE); }
+  .card.stat.hero:nth-child(6n+3){ background:linear-gradient(155deg,#E39A56,#C9701F); }
+  .card.stat.hero:nth-child(6n+4){ background:linear-gradient(155deg,#A85BC7,#82399F); }
+  .card.stat.hero:nth-child(6n+5){ background:linear-gradient(155deg,#6E6BDE,#4A47C4); }
+  .card.stat.hero:nth-child(6n+6){ background:linear-gradient(155deg,#C2679A,#9C4677); }
+  /* Outcome/closing metrics get their own green family, overriding the rotation above */
+  .card.stat.hero.hero-g1{ background:linear-gradient(155deg,#4FC9A6,#2FA687); }
+  .card.stat.hero.hero-g2{ background:linear-gradient(155deg,#34B674,#1F8F57); }
+  .card.stat.hero.hero-g3{ background:linear-gradient(155deg,#7CB86B,#5B9650); }
+  .card.stat.hero.hero-g4{ background:linear-gradient(155deg,#2E9E5B,#1D7A44); }
+
+  .badge{ display:inline-flex; align-items:center; gap:4px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; padding:2.5px 7px; border-radius:20px; }
+  .badge.good{ background:var(--good-soft); color:var(--good); }
+  .badge.bad{ background:var(--bad-soft); color:var(--bad); }
+  .badge.warn{ background:var(--warn-soft); color:var(--warn); }
+  .delta{ font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:2px; }
+  .delta.up{ color:var(--good); } .delta.down{ color:var(--bad); } .delta.flat{ color:var(--text-faint); }
+
+  .spark{ position:absolute; right:14px; top:14px; opacity:.9; }
+
+  /* ---------- Panels (funnel, table, chart containers) ---------- */
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 19px; }
+  .panel-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .panel-head h3{ font-size:13.5px; }
+  .panel-head .sub{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+  .panel-row{ display:grid; grid-template-columns:1.1fr .9fr; gap:12px; margin-bottom:12px; align-items:start; }
+  @media (max-width:940px){ .panel-row{ grid-template-columns:1fr; } }
+
+  .funnel-row{ display:grid; grid-template-columns:110px 1fr 60px 46px; align-items:center; gap:10px; padding:6px 0; font-size:12px; }
+  .funnel-row .fname{ color:var(--text-dim); }
+  .funnel-track{ height:9px; background:var(--surface-2); border-radius:6px; overflow:hidden; }
+  .funnel-fill{ height:100%; border-radius:6px; background:linear-gradient(90deg,var(--accent2),var(--accent)); }
+  .funnel-row .fcount{ text-align:right; font-weight:700; }
+  .funnel-row .fpct{ text-align:right; color:var(--text-faint); font-size:11px; }
+
+  .insight-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:4px; }
+  @media (max-width:940px){ .insight-row{ grid-template-columns:1fr; } }
+  .insight{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:11px; padding:11px 13px; font-size:11.5px; color:var(--text-dim); }
+  .insight b{ color:var(--text); display:block; font-size:12.5px; margin-bottom:2px; }
+
+  /* ---------- Tables ---------- */
+  .table-wrap{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:640px; }
+  thead th{
+    text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint);
+    font-weight:700; padding:0 10px 9px; border-bottom:1px solid var(--border); white-space:nowrap;
+  }
+  tbody td{ padding:10px; border-bottom:1px solid var(--border-soft); white-space:nowrap; }
+  tbody tr:hover{ background:var(--surface-2); }
+  td.num,th.num{ text-align:right; }
+  .row-actions{ display:flex; gap:4px; justify-content:flex-end; }
+  .icon-btn{ background:transparent; border:none; color:var(--text-faint); padding:4px; border-radius:6px; display:flex; }
+  .icon-btn:hover{ background:var(--surface-2); color:var(--text); }
+  .icon-btn svg{ width:14px; height:14px; }
+  .pill{ font-size:10.5px; font-weight:700; padding:2.5px 8px; border-radius:20px; display:inline-block; text-transform:capitalize; }
+  .pill.active{ background:var(--good-soft); color:var(--good); }
+  .pill.paused{ background:var(--warn-soft); color:var(--warn); }
+  .pill.churned{ background:var(--bad-soft); color:var(--bad); }
+  .cell-muted{ color:var(--text-faint); }
+  .col-total{ background:var(--accent-soft) !important; }
+  thead th.col-total{ color:var(--accent-strong); }
+  tr.row-total{ background:var(--accent-soft) !important; }
+  tr.row-total td{ font-weight:700; }
+  .empty-row td{ text-align:center; color:var(--text-faint); padding:34px 10px; }
+
+  /* ---------- Empty state ---------- */
+  .empty-state{ text-align:center; padding:46px 20px; color:var(--text-faint); }
+  .empty-state svg{ width:34px; height:34px; margin-bottom:10px; opacity:.5; }
+  .empty-state h4{ color:var(--text-dim); font-size:13.5px; margin-bottom:4px; }
+  .empty-state p{ font-size:12px; margin:0 auto 14px; max-width:320px; }
+
+  /* ---------- Modal ---------- */
+  .overlay{ position:fixed; inset:0; background:rgba(5,6,9,.6); backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .modal{ background:var(--bg-elevated); border:1px solid var(--border); border-radius:16px; width:100%; max-width:560px; max-height:88vh; overflow-y:auto; box-shadow:0 24px 60px -20px rgba(23,22,31,.28); }
+  .modal-head{ padding:18px 22px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:var(--bg-elevated); }
+  .modal-head h3{ font-size:15px; }
+  .modal-body{ padding:20px 22px; }
+  .modal-foot{ padding:16px 22px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .form-grid.one{ grid-template-columns:1fr; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size:11px; color:var(--text-dim); font-weight:600; }
+  .field input,.field select,.field textarea{ width:100%; }
+  .field textarea{ resize:vertical; min-height:56px; }
+  .field-span2{ grid-column:1 / -1; }
+
+  /* ---------- Chart wraps ---------- */
+  .chart-wrap{ padding-top:4px; }
+  .legend{ display:flex; gap:14px; font-size:11px; color:var(--text-faint); margin-bottom:8px; }
+  .legend .dot{ width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:5px; }
+
+  /* ---------- Today alert cards ---------- */
+  .attn-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+  .attn-card{ background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--border); border-radius:16px; padding:20px; cursor:pointer; transition:transform .12s,box-shadow .12s; }
+  .attn-card:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
+  .attn-card .num{ font-size:32px; font-weight:800; }
+  .attn-card.warn{ background:linear-gradient(180deg,var(--bad-soft),var(--surface) 55%); border-left-color:var(--bad); }
+  .attn-card.warn .num{ color:var(--bad); }
+  .attn-card .title{ font-size:13px; font-weight:600; margin-top:4px; }
+  .attn-card .desc{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+  .attn-card.ok{ background:linear-gradient(180deg,var(--good-soft),var(--surface) 55%); border-left-color:var(--good); }
+  .attn-card.ok .num{ color:var(--good); }
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--surface-2); border:1px solid var(--border);
+    color:var(--text); padding:10px 16px; border-radius:10px; font-size:12.5px; box-shadow:var(--shadow); z-index:200; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-4px); }
+
+  /* ---------- B2B month/dashboard tabs ---------- */
+  .b2b-tabbar{ display:flex; gap:4px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border); flex-wrap:wrap; }
+  .b2b-tab{ display:inline-flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:600; }
+  .b2b-tab:hover{ background:var(--surface); color:var(--text); }
+  .b2b-tab.active{ background:var(--accent-soft); color:var(--accent-strong); border-color:rgba(108,79,224,.3); }
+  .b2b-tab svg{ width:13px; height:13px; }
+  .tab-dot{ width:6px; height:6px; border-radius:50%; background:var(--good); display:inline-block; margin-left:6px; vertical-align:middle; }
+
+  /* ---------- Ads Acquisition ---------- */
+  .aa-filterbar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--border-soft); }
+  .aa-filterbar select{ font-size:11.5px; padding:6px 9px; }
+  .aa-search{ display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:0 9px; }
+  .aa-search svg{ width:14px; height:14px; color:var(--text-faint); flex-shrink:0; }
+  .aa-search input{ border:none; background:transparent; padding:7px 0; font-size:12px; width:160px; }
+  .aa-search input:focus{ box-shadow:none; }
+  .aa-inline-input{ width:84px; text-align:right; padding:5px 7px; font-size:12px; background:var(--surface-2); }
+  .aa-inline-input:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* ---------- Daily workflow ---------- */
+  .wf-quicklinks{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .wf-banner{ font-size:11.5px; background:var(--accent2-soft); color:var(--accent2); border:1px solid rgba(224,136,62,.3); border-radius:9px; padding:8px 12px; display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .wf-check-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-soft); font-size:13px; }
+  .wf-check-row:last-child{ border-bottom:none; }
+  .wf-check-row input[type=checkbox]{ width:16px; height:16px; accent-color:var(--good); cursor:pointer; flex-shrink:0; }
+  .wf-check-row .label{ flex:1; }
+  .wf-check-row .label.done{ text-decoration:line-through; color:var(--text-faint); }
+  .wf-two-col{ display:grid; grid-template-columns:1.3fr 1fr; gap:12px; align-items:start; margin-bottom:12px; }
+  @media (max-width:940px){ .wf-two-col{ grid-template-columns:1fr; } }
+  .wf-note-panel{ background:var(--surface-2); border:1px solid var(--border-soft); border-radius:11px; padding:12px; margin-bottom:10px; }
+  .wf-note-panel.hot{ border-color:rgba(224,136,62,.3); background:linear-gradient(180deg,rgba(224,136,62,.08),var(--surface-2)); }
+  .wf-note-panel .hd{ font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--text-faint); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .wf-note-add{ display:flex; gap:6px; margin-bottom:8px; }
+  .wf-note-add input{ flex:1; }
+  .wf-note-item{ display:flex; align-items:flex-start; gap:6px; padding:5px 0; border-bottom:1px solid var(--border-soft); font-size:12px; }
+  .wf-note-item:last-child{ border-bottom:none; }
+  .wf-note-item .txt{ flex:1; }
+  .wf-note-item .txt.done{ text-decoration:line-through; color:var(--text-faint); }
+  .wf-eod-link{ display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--surface-2); text-decoration:none; color:var(--text); margin-bottom:8px; }
+  .wf-eod-link:hover{ background:var(--surface); }
+  .wf-eod-link .ic{ width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--accent-soft); color:var(--accent-strong); }
+  .wf-eod-link .t b{ display:block; font-size:12.5px; }
+  .wf-eod-link .t span{ font-size:11px; color:var(--text-faint); }
+  .wf-progress{ height:5px; background:var(--surface-2); border-radius:3px; overflow:hidden; margin-top:8px; }
+  .wf-progress-fill{ height:100%; background:var(--good); }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .kbd-hint{ font-size:11px; color:var(--text-faint); }
+
+  /* mobile sidebar */
+  @media (max-width:880px){
+    .app{ flex-direction:column; }
+    .sidebar{ position:sticky; top:0; z-index:50; width:100%; height:auto; flex-direction:row; align-items:center; border-right:none; border-bottom:1px solid var(--border); overflow-x:auto; }
+    .brand{ padding:12px 14px; }
+    .brand-sub{ display:none; }
+    nav.navlist{ flex-direction:row; padding:8px; }
+    .navitem .t span{ display:none; }
+    .sidebar-foot{ display:none; }
+    .content{ padding:18px 16px 60px; }
+    .topbar{ padding:14px 16px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+
+<div class="app" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================= ICONS ============================= */
+const ICONS = {
+  sun:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>`,
+  filter:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 8v6l-4-2v-4L4 5z"/></svg>`,
+  target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="currentColor"/></svg>`,
+  briefcase:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18"/></svg>`,
+  heart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.5-4.7-9.6-9.4C1.1 7.6 3 4.5 6.3 4.2c1.9-.2 3.6.8 5.7 3 2.1-2.2 3.8-3.2 5.7-3 3.3.3 5.2 3.4 3.9 6.4C19.5 15.3 12 20 12 20z"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  edit:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m-9 0v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6"/></svg>`,
+  x:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+  download:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 19h16"/></svg>`,
+  upload:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9m0 0 4 4m-4-4-4 4M4 5h16"/></svg>`,
+  arrow:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
+  linkedin:`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.94 8.5H3.56V20.5H6.94V8.5ZM5.25 3.5A1.96 1.96 0 1 0 5.25 7.43 1.96 1.96 0 0 0 5.25 3.5ZM20.5 20.5H17.13V14.3C17.13 12.8 16.5 11.9 15.2 11.9C14.22 11.9 13.66 12.56 13.4 13.2C13.31 13.42 13.31 13.73 13.31 14.05V20.5H9.94S9.99 9.4 9.94 8.5H13.31V10C13.75 9.24 14.66 8.16 16.5 8.16C18.79 8.16 20.5 9.65 20.5 12.85V20.5Z"/></svg>`,
+  gear:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.51.51.9 1 1.06.16.06.33.09.51.09H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
+  info:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>`,
+  list:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>`,
+  link:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/></svg>`,
+  moon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`,
+  mail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>`,
+  trending:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 11 13 15 21 7M21 7h-6M21 7v6"/></svg>`,
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>`,
+};
+function icon(name){ return ICONS[name] || ""; }
+
+/* ============================= STORAGE ============================= */
+const STORE_KEY = "reach_eyeballs_cockpit_v1";
+const OUTCOMES = ["Main offer closed","Special Payment","Deposit","Follow up","Rescheduled","No-Show","Cancelled","Offer & Didn't Buy","Bad Fit / No Offer"];
+const FOLLOW_UP_OUTCOMES = ["Follow up","Rescheduled","No-Show","Cancelled"];
+const CLOSED_OUTCOMES = ["Main offer closed","Special Payment","Deposit"];
+const SHOWED_OUTCOMES = ["Main offer closed","Special Payment","Deposit","Follow up","Offer & Didn't Buy","Bad Fit / No Offer"];
+function defaultState(){
+  return {
+    clients: [],
+    b2bLog: [],
+    adsLog: [],
+    leadsLog: [],
+    fitnessLog: [],
+    workflow: { checks:{}, notes:{}, reports:{}, leadCalls:{} },
+    adsAcqLeads: [],
+    adsAcqMonthly: {},
+    settings: {
+      weightUnit: "kg",
+      targets: {
+        showRate: 70, cancellationRate: 15, closeRate: 30, offerCloseRate: 45
+      }
+    }
+  };
+}
+let state = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultState(), parsed, {
+      settings: Object.assign(defaultState().settings, parsed.settings || {}, {
+        targets: Object.assign(defaultState().settings.targets, (parsed.settings||{}).targets || {})
+      })
+    });
+  }catch(e){ return defaultState(); }
+}
+function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
+
+/* ============================= GOOGLE SHEET IMPORT =============================
+   The published dashboard can't call out to Google Sheets live (sandboxed, no
+   network access). Instead, Claude reads the sheet and bakes a snapshot in here
+   whenever you ask it to sync. Entries you edit by hand in the dashboard are
+   flagged fromSheet:false so a later sync never overwrites your manual edits. */
+const SHEET_SOURCE_URL = "https://docs.google.com/spreadsheets/d/1iCwTZE_tvxvSH6dZ_HIpqBgHZfFtU7y31zy9u4R8Rbc/edit#gid=1261861603";
+const SHEET_SYNCED_AT = "2026-08-17";
+const SHEET_IMPORT = [
+  { date:"2026-07-26", weight:null,  calories:500, protein:60, foods:"Chicken & broccoli + protein bar + 1 peach" },
+  { date:"2026-07-27", weight:59.7,  calories:480, protein:89, foods:"Chicken & broccoli + can of tuna + 1 peach" },
+  { date:"2026-07-28", weight:58.5,  calories:452, protein:65, foods:"Chicken & broccoli + protein bar" },
+  { date:"2026-07-29", weight:58.6,  calories:730, protein:84, foods:"2 small apples, 89g drained canned tuna + 150g drained canned tuna, 300kcal tuna salad w/ 19g protein, 1 peach" },
+  { date:"2026-07-30", weight:59.1,  calories:null, protein:null, foods:"" },
+  { date:"2026-08-02", weight:null,  calories:350, protein:70, foods:"Chicken with veggies" },
+  { date:"2026-08-03", weight:59.5,  calories:590, protein:56, foods:"Chicken with veggies + protein bar + pear" },
+  { date:"2026-08-04", weight:59,    calories:350, protein:56, foods:"Chicken with veggies" },
+  { date:"2026-08-05", weight:57.9,  calories:400, protein:56, foods:"Chicken with veggies + half an apple" },
+  { date:"2026-08-06", weight:57.8,  calories:400, protein:55, foods:"Tuna w/ tomato + protein shake" },
+  { date:"2026-08-07", weight:57.2,  calories:450, protein:58, foods:"Chicken breast w/ courgettini, phili light + peach" },
+  { date:"2026-08-08", weight:57,    calories:1200, protein:104, foods:"Protein bar + 2 peaches + sardines and salada algarve + ready meal" },
+  { date:"2026-08-09", weight:57.2,  calories:950, protein:98, foods:"Protein bar + 1 peach + 1 nectarine + apple + tuna salad + turkey minced w/ veggies" },
+  { date:"2026-08-10", weight:57.2,  calories:460, protein:71, foods:"1 nectarine + tuna, 85g + turkey breast mince with vegetables" },
+  { date:"2026-08-11", weight:56.7,  calories:970, protein:88, foods:"2 nectarines + tuna salad + protein bar + turkey breast mince with vegetables" },
+  { date:"2026-08-12", weight:56.5,  calories:1030, protein:89, foods:"3 nectarines + tuna salad + protein bar + turkey breast mince with vegetables" },
+  { date:"2026-08-13", weight:56.5,  calories:910, protein:98, foods:"3 nectarines + tuna salad + protein shake + turkey breast mince with vegetables" },
+  { date:"2026-08-14", weight:56.7,  calories:1540, protein:95, foods:"4 nectarines + caesar salad + 2 protein bars + chicken minced w/ veggies" },
+  { date:"2026-08-15", weight:57.1,  calories:1118, protein:null, foods:"3 nectarines + bagel w/ egg and protein milk + chicken minced w/ veggies + small prozis protein bar" },
+  { date:"2026-08-16", weight:57.1,  calories:1419, protein:92, foods:"3 nectarines + 3 protein bars + 1 protein bar + tuna salad + tremoços" },
+];
+/* ============================= CLICKUP SNAPSHOT =============================
+   Same constraint as the Sheets sync: the published page can't call ClickUp
+   live. Claude reads it and bakes a snapshot in here when asked to sync. */
+const CLICKUP_SYNCED_AT = "2026-08-09";
+const CLICKUP_MY_NAME = "Vanessa Ricardo";
+const CLICKUP_TASKS = [
+  { id:"869du1364", name:"Client Reporting", dueDate:"2026-08-10", list:"Client Delivery Hub", assignee:"Anja Smith", url:"https://app.clickup.com/t/869du1364" },
+  { id:"869dkf56y", name:"Check all client ads + update them", dueDate:"2026-08-10", list:"Client Delivery Hub", assignee:"Vanessa Ricardo", url:"https://app.clickup.com/t/869dkf56y" },
+];
+
+/* ============================= FOLLOW-UP CADENCE =============================
+   Rule (set by Vanessa 2026-08-09, holds until she changes it): leads that
+   didn't book get chased every 2 days for the first week, then it drops off
+   this list. Purely a function of the lead's logged date — no separate
+   "last contacted" state to maintain. */
+const FOLLOW_UP_CADENCE_DAYS = 2;
+const FOLLOW_UP_WINDOW_DAYS = 7;
+function followUpsDueToday(){
+  return state.leadsLog.filter(l=>{
+    if(!FOLLOW_UP_OUTCOMES.includes(l.outcome)) return false;
+    const daysSince = daysBetween(l.date, todayStr());
+    return daysSince>0 && daysSince<=FOLLOW_UP_WINDOW_DAYS && daysSince%FOLLOW_UP_CADENCE_DAYS===0;
+  }).sort((a,b)=>a.date<b.date?-1:1);
+}
+function mergeSheetImport(){
+  let changed = false;
+  SHEET_IMPORT.forEach(row=>{
+    const idx = state.fitnessLog.findIndex(e=>e.date===row.date);
+    if(idx>=0){
+      const existing = state.fitnessLog[idx];
+      if(existing.fromSheet===false) return;
+      state.fitnessLog[idx] = Object.assign({}, row, { id:existing.id, fromSheet:true });
+      changed = true;
+    } else {
+      state.fitnessLog.push(Object.assign({}, row, { id:uid(), fromSheet:true }));
+      changed = true;
+    }
+  });
+  if(changed) save();
+}
+
+/* ============================= B2B (LinkedIn) SHEET IMPORT =============================
+   Same "sync on request" pattern as the calorie tracker above. Only Opener MS,
+   Proposal MS, FUPs and Doc Accepts are filled in on the source sheet so far —
+   the other B2B_METRICS fields default to 0 for these rows until the sheet has
+   more data and you ask Claude to sync again. */
+const B2B_SHEET_SOURCE_URL = "https://docs.google.com/spreadsheets/d/1OLX9a7EtTT2lnIrRPqfs_-chNI-tVBJW7YQmcMVpU0U/edit?gid=1251151466#gid=1251151466";
+const B2B_SHEET_SYNCED_AT = "2026-08-17";
+const B2B_SHEET_IMPORT = [
+  { date:"2026-08-03", proposalMS:0 },
+  { date:"2026-08-04", openerMS:14 },
+  { date:"2026-08-07", openerMS:9 },
+  { date:"2026-08-10", openerMS:3, proposalMS:5, fupsToday:4, docAccepts:2 },
+  { date:"2026-08-11", openerMS:3, proposalMS:5, fupsToday:4, docAccepts:1 },
+  { date:"2026-08-12", openerMS:5, proposalMS:4, fupsToday:8, docAccepts:1 },
+  { date:"2026-08-13", openerMS:5, proposalMS:5, fupsToday:7, docAccepts:0 },
+  { date:"2026-08-14", openerMS:6, proposalMS:6, fupsToday:5, docAccepts:0 },
+];
+function mergeB2BSheetImport(){
+  let changed = false;
+  B2B_SHEET_IMPORT.forEach(row=>{
+    const idx = state.b2bLog.findIndex(e=>e.date===row.date);
+    const full = { notes:"" };
+    B2B_METRICS.forEach(m=>{ full[m.key] = row[m.key]||0; });
+    if(idx>=0){
+      const existing = state.b2bLog[idx];
+      if(existing.fromSheet===false) return;
+      state.b2bLog[idx] = Object.assign({}, existing, full, { id:existing.id, date:row.date, fromSheet:true });
+      changed = true;
+    } else {
+      state.b2bLog.push(Object.assign({ id:uid(), date:row.date }, full, { fromSheet:true }));
+      changed = true;
+    }
+  });
+  if(changed) save();
+}
+
+/* ============================= UTILS ============================= */
+function fmtMoney(n){ n = n||0; const neg = n<0; return (neg?"-£":"£")+Math.round(Math.abs(n)).toLocaleString("en-GB"); }
+function fmtNum(n){ return (n||0).toLocaleString("en-GB"); }
+function fmtPct(n, d=1){ if(n===null||n===undefined||!isFinite(n)) return "—"; return n.toFixed(d)+"%"; }
+function safeDiv(a,b){ if(!b) return null; return (a/b)*100; }
+function localDateStr(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function todayStr(){ return localDateStr(new Date()); }
+function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return localDateStr(d); }
+function fmtDateLong(dstr){
+  if(!dstr) return "—";
+  const d = new Date(dstr+"T00:00:00");
+  return d.toLocaleDateString("en-GB",{ weekday:"long", day:"numeric", month:"long" });
+}
+function fmtDateShort(dstr){
+  if(!dstr) return "—";
+  const d = new Date(dstr+"T00:00:00");
+  return d.toLocaleDateString("en-GB",{ day:"numeric", month:"short" });
+}
+function daysBetween(a,b){
+  return Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00"))/86400000);
+}
+function inPeriod(dateStr, period){
+  if(period==="all") return true;
+  const today = todayStr();
+  if(period==="today") return dateStr===today;
+  if(period==="7d") return dateStr>=daysAgo(6) && dateStr<=today;
+  if(period==="30d") return dateStr>=daysAgo(29) && dateStr<=today;
+  if(period==="mtd"){ return dateStr.slice(0,7)===today.slice(0,7); }
+  return true;
+}
+function sum(arr, key){ return arr.reduce((a,r)=>a+(Number(r[key])||0),0); }
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+function badgeFor(value, target, direction){
+  if(value===null || target===undefined || target===null) return "";
+  let good = direction==="lower" ? value<=target : value>=target;
+  let near = direction==="lower" ? value<=target*1.15 : value>=target*0.85;
+  if(good) return `<span class="badge good">${icon("check")} on target</span>`;
+  if(near) return `<span class="badge warn">near target</span>`;
+  return `<span class="badge bad">${direction==="lower"?"over":"below"}</span>`;
+}
+function sparkline(values, color){
+  if(!values.length) return "";
+  const w=64,h=24,max=Math.max(...values,1),min=Math.min(...values,0);
+  const range=(max-min)||1;
+  const pts = values.map((v,i)=>{
+    const x = values.length===1?w:(i/(values.length-1))*w;
+    const y = h-((v-min)/range)*h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/* ============================= NAV ============================= */
+const NAV = [
+  { id:"today", label:"Today", sub:"What needs attention", icon:"sun", chip:"#E0883E" },
+  { id:"workflow", label:"Daily Workflow", sub:"Morning to end of day", icon:"list", chip:"#6C4FE0" },
+  { id:"b2b", label:"LinkedIn Acquisition", sub:"LinkedIn client acquisition", icon:"filter", chip:"#5A5FD9" },
+  { id:"ads", label:"Client Ads", sub:"Bookings, calls & closes", icon:"target", chip:"#A85BC7" },
+  { id:"adsacq", label:"Ads Acquisition", sub:"Paid ads → leads → sales", icon:"trending", chip:"#C9701F" },
+  { id:"clients", label:"Client Management", sub:"CRM & accounts", icon:"briefcase", chip:"#9D7CF2" },
+  { id:"fitness", label:"Fitness", sub:"Weight, calories & food", icon:"heart", chip:"#C2679A" },
+];
+let activeView = "today";
+let uiState = {
+  b2bTab: todayStr().slice(0,7), adsPeriod:"7d", adsClient:"all", fitTab: todayStr().slice(0,7), clientFilter:"all", clientSearch:"",
+  aaTab: todayStr().slice(0,7),
+  aaFilters: { closer:"all", outcome:"all", offer:"all", closedPitched:"all", week:"all", search:"", sortBy:"date", sortDir:"desc" },
+};
+
+/* ============================= RENDER SHELL ============================= */
+function renderShell(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">RE</div>
+        <div>
+          <div class="brand-name">Reach Eyeballs</div>
+          <div class="brand-sub">Cockpit</div>
+        </div>
+      </div>
+      <nav class="navlist" id="navlist">
+        ${NAV.map(n=>`
+          <button class="navitem ${activeView===n.id?"active":""}" data-nav="${n.id}">
+            <span class="nav-ic" style="background:${n.chip}1f;color:${n.chip}">${icon(n.icon)}</span>
+            <span class="t"><b>${n.label}</b><span>${n.sub}</span></span>
+            <span class="badge-dot" id="navbadge-${n.id}" style="display:none"></span>
+          </button>`).join("")}
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-row">
+          <div class="user-avatar">${(window.__userEmail||"V").slice(0,1).toUpperCase()}</div>
+          <div class="user-email">${window.__userEmail||"you@reacheyeballs.com"}</div>
+        </div>
+        <div class="storage-note">Saved to this browser only. <button id="exportAllBtn">Export backup</button></div>
+      </div>
+    </aside>
+    <main class="main">
+      <div id="viewhost"></div>
+    </main>
+  `;
+  document.querySelectorAll("[data-nav]").forEach(b=>{
+    b.addEventListener("click", ()=>{ activeView=b.dataset.nav; renderShell(); });
+  });
+  document.getElementById("exportAllBtn").addEventListener("click", exportAllJSON);
+  renderView();
+  updateNavBadges();
+}
+
+function updateNavBadges(){
+  const stale = staleClientsCount();
+  const b2bDue = b2bNeedsLogToday() ? 1 : 0;
+  const followUps = needsFollowUp("all").length;
+  const el1 = document.getElementById("navbadge-clients");
+  if(el1){ if(stale>0){ el1.style.display="flex"; el1.textContent=stale; } }
+  const el2 = document.getElementById("navbadge-b2b");
+  if(el2){ if(b2bDue>0){ el2.style.display="flex"; el2.textContent=b2bDue; } }
+  const el3 = document.getElementById("navbadge-ads");
+  if(el3){ if(followUps>0){ el3.style.display="flex"; el3.textContent=followUps; } }
+}
+
+function renderView(){
+  const host = document.getElementById("viewhost");
+  if(activeView==="today") host.innerHTML = viewToday();
+  else if(activeView==="workflow") host.innerHTML = viewWorkflow();
+  else if(activeView==="b2b") host.innerHTML = viewB2B();
+  else if(activeView==="ads") host.innerHTML = viewAds();
+  else if(activeView==="adsacq") host.innerHTML = viewAdsAcq();
+  else if(activeView==="clients") host.innerHTML = viewClients();
+  else if(activeView==="fitness") host.innerHTML = viewFitness();
+  bindViewEvents();
+}
+
+/* ============================= TODAY ============================= */
+function staleClientsCount(){
+  const today = todayStr();
+  return state.clients.filter(c=>{
+    if(c.status!=="active") return false;
+    const logs = state.adsLog.filter(l=>l.clientId===c.id);
+    if(!logs.length) return true;
+    const latest = logs.map(l=>l.date).sort().pop();
+    return daysBetween(latest, today) > 3;
+  }).length;
+}
+function b2bNeedsLogToday(){
+  return !state.b2bLog.some(r=>r.date===todayStr());
+}
+function fitnessNeedsLogToday(){
+  return !state.fitnessLog.some(r=>r.date===todayStr());
+}
+function viewToday(){
+  const now = new Date();
+  const greeting = now.getHours()<12?"Good morning":now.getHours()<18?"Good afternoon":"Good evening";
+  const followUpCount = needsFollowUp("all").length;
+  const cards = [];
+
+  cards.push({
+    n: followUpCount, title: followUpCount===1?"lead needs follow-up":"leads need follow-up",
+    desc: followUpCount? "Follow up, rescheduled, no-show or cancelled — worth a nudge." : "No open leads waiting on a follow-up.",
+    warn: followUpCount>0, nav:"ads"
+  });
+
+  cards.push({
+    n: b2bNeedsLogToday()?1:0, title: b2bNeedsLogToday()?"LinkedIn log not filled in today":"LinkedIn log up to date",
+    desc: b2bNeedsLogToday()?"No LinkedIn DM activity recorded for today yet.":"Today's DM activity has been logged.",
+    warn: b2bNeedsLogToday(), nav:"b2b"
+  });
+  cards.push({
+    n: fitnessNeedsLogToday()?1:0, title: fitnessNeedsLogToday()?"today's fitness log is empty":"fitness logged for today",
+    desc: fitnessNeedsLogToday()?"Weight & food not recorded yet.":"Nice — weight and meals recorded.",
+    warn: fitnessNeedsLogToday(), nav:"fitness"
+  });
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>${greeting}</h1>
+        <div class="sub">${fmtDateLong(todayStr())} — here's what needs your attention.</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="attn-grid">
+        ${cards.map(c=>`
+          <div class="attn-card ${c.warn?"warn":"ok"}" data-jump="${c.nav}">
+            <div class="num tnum">${c.n}</div>
+            <div class="title">${c.title}</div>
+            <div class="desc">${c.desc}</div>
+          </div>`).join("")}
+      </div>
+      ${renderFollowUpDueTodayPanel()}
+      ${renderClickUpPanel()}
+
+      <div style="margin-top:22px" class="panel">
+        <div class="panel-head">
+          <div><h3>Quick log</h3><div class="sub">Jump straight into today's entries</div></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn primary" data-open="b2bEntry">${icon("plus")} Log today's DMs</button>
+          <button class="btn primary" data-open="adsEntry">${icon("plus")} Log a client's ad day</button>
+          <button class="btn primary" data-open="fitEntry">${icon("plus")} Log today's fitness</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFollowUpDueTodayPanel(){
+  const due = followUpsDueToday();
+  return `
+      <div class="panel" style="margin-top:16px;${due.length?'border-color:rgba(224,136,62,.32);background:linear-gradient(180deg,rgba(224,136,62,.06),var(--surface));':''}">
+        <div class="panel-head">
+          <div><h3>${icon("info")} Follow up with today</h3><div class="sub">Every ${FOLLOW_UP_CADENCE_DAYS} days for the first ${FOLLOW_UP_WINDOW_DAYS} days after a no-book — until you change this rule</div></div>
+          ${due.length?`<span class="badge warn">${due.length} lead${due.length===1?"":"s"}</span>`:""}
+        </div>
+        ${due.length? `<div class="table-wrap"><table>
+          <thead><tr><th>Lead</th><th>Client</th><th>Outcome</th><th class="num">Days since</th><th></th></tr></thead>
+          <tbody>
+            ${due.map(l=>{
+              const c = state.clients.find(x=>x.id===l.clientId);
+              return `<tr>
+                <td><b>${l.leadName}</b></td>
+                <td class="cell-muted">${c?c.company:"—"}</td>
+                <td><span class="badge ${outcomeBadgeClass(l.outcome)}">${l.outcome}</span></td>
+                <td class="num tnum">${daysBetween(l.date, todayStr())}</td>
+                <td><div class="row-actions"><button class="icon-btn" data-edit-lead="${l.id}">${icon("edit")}</button></div></td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table></div>` : `<div class="empty-state" style="padding:16px 0">${icon("check")}<p>Nobody's due for a follow-up touch today.</p></div>`}
+      </div>`;
+}
+
+function renderClickUpPanel(){
+  const today = todayStr(), tomorrow = daysAgo(-1);
+  const rows = CLICKUP_TASKS.filter(t=>t.assignee===CLICKUP_MY_NAME && (t.dueDate===today||t.dueDate===tomorrow)).sort((a,b)=>a.dueDate<b.dueDate?-1:1);
+  return `
+      <div class="panel" style="margin-top:16px">
+        <div class="panel-head">
+          <div><h3>${icon("check")} ClickUp — assigned to you, due today & tomorrow</h3><div class="sub">Synced ${fmtDateLong(CLICKUP_SYNCED_AT)} — ask Claude to "sync my ClickUp tasks" to refresh</div></div>
+        </div>
+        ${rows.length? `<div class="table-wrap"><table>
+          <thead><tr><th>Task</th><th>List</th><th>Due</th><th></th></tr></thead>
+          <tbody>
+            ${rows.map(t=>`
+              <tr>
+                <td><b>${t.name}</b></td>
+                <td class="cell-muted">${t.list}</td>
+                <td><span class="badge ${t.dueDate===today?'bad':'warn'}">${t.dueDate===today?'today':'tomorrow'}</span></td>
+                <td><a class="btn ghost sm" href="${t.url}" target="_blank" rel="noopener">Open</a></td>
+              </tr>`).join("")}
+          </tbody>
+        </table></div>` : `<div class="empty-state" style="padding:16px 0">${icon("check")}<p>Nothing due today or tomorrow in ClickUp.</p></div>`}
+      </div>`;
+}
+
+/* ============================= DAILY WORKFLOW ============================= */
+const WF_LINKS = {
+  ghl: "https://app.gohighlevel.com",
+  linkedin: "https://www.linkedin.com/messaging/",
+  clickup: "https://app.clickup.com",
+  liTracker: "https://docs.google.com/spreadsheets/d/1v6qJuknWRPxz1avbowiDNDepg6q8prJfGJQfr0DcRTk/edit?gid=446377430#gid=446377430",
+  scriptHub: "https://docs.google.com/document/d/19cyN9A_RhxqdBTeGgte0khh789XZKDRVbgwdWliTKXI/edit?tab=t.0",
+  permissionScript: "https://docs.google.com/document/d/1EaQbIHe8IZmSxl1M432BOK9ROp0ZwA7B8VocHY9fKHU/edit?tab=t.0",
+};
+function wfCheck(id){ return !!state.workflow.checks[todayStr()+"|"+id]; }
+function wfToggleCheck(id, val){ state.workflow.checks[todayStr()+"|"+id]=val; save(); }
+function wfNotes(section,type){ return state.workflow.notes[todayStr()+"|"+section+"|"+type] || []; }
+function wfSetNotes(section,type,list){ state.workflow.notes[todayStr()+"|"+section+"|"+type]=list; save(); }
+function wfReport(date){ return state.workflow.reports[date||todayStr()] || {}; }
+function wfSetReport(patch){ const d=todayStr(); state.workflow.reports[d]=Object.assign({}, state.workflow.reports[d]||{}, patch); save(); }
+function wfLeadCall(section,clientId){ return !!state.workflow.leadCalls[todayStr()+"|"+section+"|"+clientId]; }
+function wfToggleLeadCall(section,clientId,val){ state.workflow.leadCalls[todayStr()+"|"+section+"|"+clientId]=val; save(); }
+function wfWeekDates(){
+  const d = new Date(todayStr()+"T00:00:00");
+  const day = d.getDay();
+  const monday = new Date(d); monday.setDate(d.getDate()+(day===0?-6:1-day));
+  const dates=[];
+  for(let i=0;i<5;i++){ const dd=new Date(monday); dd.setDate(monday.getDate()+i); dates.push(localDateStr(dd)); }
+  return dates;
+}
+function wfDmsForDate(d){ return sum(state.b2bLog.filter(x=>x.date===d),"openerMS")+sum(state.b2bLog.filter(x=>x.date===d),"proposalMS"); }
+function wfSumReports(dates){
+  const t={coldCalls:0,oldLeads:0,meetings:0,revenue:0,dms:0,days:0};
+  dates.forEach(d=>{
+    t.dms += wfDmsForDate(d);
+    const r = state.workflow.reports[d];
+    if(!r) return;
+    t.coldCalls+=Number(r.coldCalls)||0; t.oldLeads+=Number(r.oldLeads)||0; t.meetings+=Number(r.meetings)||0; t.revenue+=Number(r.revenue)||0; t.days++;
+  });
+  return t;
+}
+function wfOutreachRow(id, label, scriptUrl){
+  const checked = wfCheck(id);
+  return `<div class="wf-check-row">
+    <input type="checkbox" data-wf-check="${id}" ${checked?"checked":""} />
+    <span class="label ${checked?"done":""}">${label}</span>
+    ${scriptUrl?`<a class="btn ghost sm" href="${scriptUrl}" target="_blank" rel="noopener">${icon("edit")} Script</a>`:""}
+  </div>`;
+}
+function wfCallLeadsBlock(section){
+  const active = state.clients.filter(c=>c.status==="active");
+  const done = active.filter(c=>wfLeadCall(section,c.id)).length;
+  const pct = active.length? Math.round(done/active.length*100) : 0;
+  const rows = active.length? active.map(c=>{
+    const checked = wfLeadCall(section,c.id);
+    return `<div class="wf-check-row">
+      <input type="checkbox" data-wf-leadcall="${section}|${c.id}" ${checked?"checked":""} />
+      <span class="label ${checked?"done":""}">${c.company}</span>
+      <a class="btn ghost sm" href="${WF_LINKS.ghl}" target="_blank" rel="noopener">${icon("check")} Call</a>
+    </div>`;
+  }).join("") : `<div class="empty-state" style="padding:14px 0">${icon("info")}<p>No active clients yet — add one in Client Management.</p></div>`;
+  return `
+    <div class="panel" style="margin-bottom:0">
+      <div class="panel-head"><div><h3>Call leads</h3><div class="sub">${section==="morning"?"Follow up — morning round":"Follow up — afternoon round"}</div></div></div>
+      ${rows}
+      ${active.length?`<div class="wf-progress"><div class="wf-progress-fill" style="width:${pct}%"></div></div>`:""}
+    </div>`;
+}
+function wfNotesPanel(section, type, title, iconName, cls){
+  const list = wfNotes(section,type);
+  const active = list.filter(n=>!n.done).length;
+  return `
+    <div class="wf-note-panel ${cls}">
+      <div class="hd">${icon(iconName)} ${title} ${active?`<span class="badge ${cls==='hot'?'bad':'warn'}">${active}</span>`:""}</div>
+      <div class="wf-note-add">
+        <input type="text" placeholder="${type==='hot'?'Name – note':'Add a task'}" data-wf-note-input="${section}|${type}" />
+        <button class="btn ghost sm" data-wf-note-add="${section}|${type}">${icon("plus")}</button>
+      </div>
+      ${list.length? list.map((n,i)=>`
+        <div class="wf-note-item">
+          <input type="checkbox" ${n.done?"checked":""} data-wf-note-toggle="${section}|${type}|${i}" style="margin-top:2px;flex-shrink:0" />
+          <span class="txt ${n.done?"done":""}">${n.text}</span>
+          <button class="icon-btn" data-wf-note-del="${section}|${type}|${i}">${icon("x")}</button>
+        </div>`).join("") : `<div class="cell-muted" style="font-size:11.5px;text-align:center;padding:8px 0">Nothing here yet</div>`}
+    </div>`;
+}
+function viewWorkflow(){
+  const today = todayStr();
+  const dow = new Date(today+"T00:00:00").getDay(); // 0 Sun .. 6 Sat
+  const rep = wfReport();
+  const weekDates = wfWeekDates();
+  const dayNames = ["Mon","Tue","Wed","Thu","Fri"];
+  const wk = wfSumReports(weekDates);
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Daily Workflow</h1>
+        <div class="sub">${fmtDateLong(today)}</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn ghost" data-wf-reset-day>${icon("trash")} Reset today</button>
+      </div>
+    </div>
+    <div class="content">
+      ${dow===1||dow===4?`<div class="wf-banner">${icon("info")} Today's a client tracker day — check <button class="btn ghost sm" data-jump="clients" style="margin-left:4px">Client Management</button> before you start.</div>`:""}
+      ${dow===5?`<div class="wf-banner">${icon("info")} It's Friday — send client reports today.</div>`:""}
+
+      <div class="wf-quicklinks">
+        <a class="btn" href="${WF_LINKS.ghl}" target="_blank" rel="noopener">${icon("link")} GoHighLevel</a>
+        <a class="btn" href="${WF_LINKS.linkedin}" target="_blank" rel="noopener">${icon("linkedin")} LinkedIn</a>
+        <a class="btn" href="${WF_LINKS.liTracker}" target="_blank" rel="noopener">${icon("link")} LinkedIn tracker</a>
+        <a class="btn" href="${WF_LINKS.scriptHub}" target="_blank" rel="noopener">${icon("edit")} DM script hub</a>
+        <a class="btn" href="${WF_LINKS.clickup}" target="_blank" rel="noopener">${icon("check")} ClickUp</a>
+      </div>
+
+      <div class="section-label"><span class="badge warn" style="text-transform:uppercase">Morning</span></div>
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-head"><div><h3>LinkedIn outreach</h3><div class="sub">Messages + tracker</div></div></div>
+        ${wfOutreachRow("li-m-1","Send LinkedIn DMs to 10 prospects", WF_LINKS.permissionScript)}
+        ${wfOutreachRow("li-m-2","Follow up (x1)", WF_LINKS.scriptHub)}
+        ${wfOutreachRow("li-m-3","Fill out tracker — or log it in LinkedIn Acquisition", null)}
+      </div>
+      <div class="wf-two-col">
+        ${wfCallLeadsBlock("morning")}
+        <div>
+          ${wfNotesPanel("morning","hot","Hot leads","info","hot")}
+          ${wfNotesPanel("morning","task","Tasks","list","")}
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:22px"><span class="badge" style="text-transform:uppercase;background:var(--accent-soft);color:var(--accent-strong)">Afternoon</span></div>
+      <div class="wf-two-col">
+        ${wfCallLeadsBlock("afternoon")}
+        <div>
+          ${wfNotesPanel("afternoon","hot","Hot leads","info","hot")}
+          ${wfNotesPanel("afternoon","task","Tasks","list","")}
+        </div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><div><h3>LinkedIn outreach</h3><div class="sub">Messages + tracker</div></div></div>
+        ${wfOutreachRow("li-a-1","Send LinkedIn DMs to 10 prospects", WF_LINKS.permissionScript)}
+        ${wfOutreachRow("li-a-2","Follow up (x1)", WF_LINKS.scriptHub)}
+        ${wfOutreachRow("li-a-3","Fill out tracker — or log it in LinkedIn Acquisition", null)}
+      </div>
+
+      <div class="section-label" style="margin-top:22px"><span class="badge" style="text-transform:uppercase;background:var(--surface-2);color:var(--text-dim)">${icon("moon")} End of day</span></div>
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-head"><div><h3>Wrap up</h3><div class="sub">Close out the day and set up tomorrow</div></div></div>
+        <a class="wf-eod-link" href="${WF_LINKS.clickup}" target="_blank" rel="noopener">
+          <div class="ic">${icon("check")}</div>
+          <div class="t"><b>ClickUp</b><span>Update tasks & log work</span></div>
+        </a>
+        <button class="wf-eod-link" style="width:100%;text-align:left;cursor:pointer;border:1px solid var(--border)" data-jump="fitness">
+          <div class="ic">${icon("heart")}</div>
+          <div class="t"><b>Log fitness</b><span>Weight, calories & food</span></div>
+        </button>
+        <button class="wf-eod-link" style="width:100%;text-align:left;cursor:pointer;border:1px solid var(--border)" data-jump="ads">
+          <div class="ic">${icon("target")}</div>
+          <div class="t"><b>Review follow-ups</b><span>Check who's due tomorrow</span></div>
+        </button>
+        <div style="border-top:1px dashed var(--border-soft);margin-top:10px;padding-top:6px">
+          ${wfOutreachRow("eod-clickup","ClickUp updated")}
+          ${wfOutreachRow("eod-fitness","Fitness logged")}
+          ${wfOutreachRow("eod-plan","Tomorrow planned")}
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-head"><div><h3>End of day numbers</h3><div class="sub">Quick daily activity — LinkedIn DMs pull automatically from LinkedIn Acquisition</div></div></div>
+        <div class="grid cols-4" style="margin-bottom:0">
+          <div class="field"><label>Cold calls made</label><input type="number" min="0" value="${rep.coldCalls||""}" data-wf-report="coldCalls" /></div>
+          <div class="field"><label>Old leads called</label><input type="number" min="0" value="${rep.oldLeads||""}" data-wf-report="oldLeads" /></div>
+          <div class="field"><label>Meetings booked</label><input type="number" min="0" value="${rep.meetings||""}" data-wf-report="meetings" /></div>
+          <div class="field"><label>Revenue generated (£)</label><input type="number" min="0" value="${rep.revenue||""}" data-wf-report="revenue" /></div>
+        </div>
+        <div class="field" style="margin-top:12px"><label>Notes / wins / blockers</label><textarea data-wf-report="notes">${rep.notes||""}</textarea></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn primary" data-wf-generate-report>${icon("check")} Generate written report</button>
+          <span class="cell-muted" style="font-size:11.5px">Today's LinkedIn DMs: <b class="tnum">${fmtNum(wfDmsForDate(today))}</b></span>
+        </div>
+        <div id="wfReportOutput"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>This week</h3><div class="sub">Mon–Fri · Daily workflow numbers</div></div>
+          <a class="btn ghost sm" href="${wfWeeklyEmailHref(wk, weekDates)}">${icon("mail")} Email me this summary</a>
+        </div>
+        <div class="grid cols-4" style="margin-bottom:0">
+          <div class="card stat"><div class="label">Cold calls</div><div class="value-row"><span class="value tnum">${fmtNum(wk.coldCalls)}</span></div></div>
+          <div class="card stat"><div class="label">Old leads called</div><div class="value-row"><span class="value tnum">${fmtNum(wk.oldLeads)}</span></div></div>
+          <div class="card stat"><div class="label">Meetings booked</div><div class="value-row"><span class="value tnum">${fmtNum(wk.meetings)}</span></div></div>
+          <div class="card stat"><div class="label">LinkedIn DMs</div><div class="value-row"><span class="value tnum">${fmtNum(wk.dms)}</span></div></div>
+        </div>
+        <div class="table-wrap" style="margin-top:12px">
+          <table>
+            <thead><tr><th>Day</th><th class="num">Cold calls</th><th class="num">Old leads</th><th class="num">Meetings</th><th class="num">LI DMs</th><th class="num">Revenue</th></tr></thead>
+            <tbody>
+              ${weekDates.map((d,i)=>{
+                const r = state.workflow.reports[d];
+                const isToday = d===today;
+                return `<tr${isToday?' style="background:var(--surface-2)"':''}>
+                  <td>${dayNames[i]} <span class="cell-muted">${fmtDateShort(d)}</span></td>
+                  <td class="num tnum">${r?fmtNum(r.coldCalls||0):"—"}</td>
+                  <td class="num tnum">${r?fmtNum(r.oldLeads||0):"—"}</td>
+                  <td class="num tnum">${r?fmtNum(r.meetings||0):"—"}</td>
+                  <td class="num tnum">${fmtNum(wfDmsForDate(d))}</td>
+                  <td class="num tnum">${r?fmtMoney(r.revenue||0):"—"}</td>
+                </tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function wfWeeklyEmailHref(wk, weekDates){
+  const subject = `Weekly Activity Summary — w/e ${fmtDateShort(weekDates[weekDates.length-1])}`;
+  const body = `Weekly Summary\n\nCold calls made: ${wk.coldCalls}\nOld leads called: ${wk.oldLeads}\nMeetings booked: ${wk.meetings}\nLinkedIn DMs sent: ${wk.dms}\nRevenue generated: £${wk.revenue.toLocaleString()}`;
+  return `mailto:${encodeURIComponent(window.__userEmail||"")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/* ============================= B2B (LinkedIn outreach) ============================= */
+const B2B_METRICS = [
+  { key:"openerMS", label:"Opener MS" },
+  { key:"proposalMS", label:"Proposal MS" },
+  { key:"fupsToday", label:"FUPs" },
+  { key:"docAccepts", label:"Doc Accepts" },
+  { key:"connectionsSent", label:"Connections sent" },
+  { key:"callsProposed", label:"Calls Proposed" },
+  { key:"calendarLinksSent", label:"Calendar links sent", green:1 },
+  { key:"callsBooked", label:"Calls Booked", green:2 },
+  { key:"sales", label:"Sales", green:3 },
+  { key:"cashCollected", label:"Cash Collected", money:true, green:4 },
+];
+function b2bMonthKey(dateStr){ return dateStr.slice(0,7); }
+const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function b2bMonthLabel(monthKey){
+  const m = Number(monthKey.split("-")[1]);
+  return MONTH_ABBR[m-1];
+}
+function b2bAvailableMonths(){
+  const year = todayStr().slice(0,4);
+  const months = [];
+  for(let m=1;m<=12;m++) months.push(year+"-"+String(m).padStart(2,"0"));
+  return months;
+}
+function b2bSumRows(rows){
+  const out = {};
+  B2B_METRICS.forEach(m=>{ out[m.key] = sum(rows, m.key); });
+  return out;
+}
+function b2bRowsForMonth(monthKey){ return state.b2bLog.filter(r=>b2bMonthKey(r.date)===monthKey); }
+function b2bRowsForRange(start,end){ return state.b2bLog.filter(r=>r.date>=start && r.date<=end); }
+function b2bMetricCell(m, val){ return `<td class="num tnum">${m.money?fmtMoney(val):fmtNum(val)}</td>`; }
+function rateCard(label, value){
+  return `<div class="card stat rate"><div class="label">${label}</div><div class="value-row"><span class="value tnum">${value}</span></div></div>`;
+}
+function b2bStatCard(label, value, money, green){
+  const display = typeof value==="string" ? value : (money?fmtMoney(value):fmtNum(value));
+  return `<div class="card stat hero${green?" hero-g"+green:""}"><div class="label">${label}</div><div class="value-row"><span class="value tnum">${display}</span></div></div>`;
+}
+function b2bStageRates(t){
+  return [
+    { label:"Opener→Proposal", value: safeDiv(t.proposalMS, t.openerMS) },
+    { label:"Proposal→Call", value: safeDiv(t.callsProposed, t.proposalMS) },
+    { label:"Call→Calendar", value: safeDiv(t.calendarLinksSent, t.callsProposed) },
+    { label:"Calendar→Booked", value: safeDiv(t.callsBooked, t.calendarLinksSent) },
+    { label:"Booked→Sale", value: safeDiv(t.sales, t.callsBooked) },
+  ];
+}
+function viewB2B(){
+  const months = b2bAvailableMonths();
+  const curMonth = todayStr().slice(0,7);
+  if(uiState.b2bTab!=="dashboard" && !months.includes(uiState.b2bTab)) uiState.b2bTab = curMonth;
+  const activeTab = uiState.b2bTab;
+  const allRows = state.b2bLog.slice().sort((a,b)=>a.date<b.date?-1:1);
+  const firstDate = allRows.length ? allRows[0].date : null;
+  const daysRunning = firstDate ? daysBetween(firstDate, todayStr())+1 : 0;
+
+  const tabsHtml = `
+    <div class="b2b-tabbar">
+      <button class="b2b-tab ${activeTab==='dashboard'?'active':''}" data-b2b-tab="dashboard">${icon("briefcase")} Dashboard</button>
+      ${months.map(mk=>`<button class="b2b-tab ${activeTab===mk?'active':''}" data-b2b-tab="${mk}">${b2bMonthLabel(mk)}${mk===curMonth?'<span class="tab-dot"></span>':''}</button>`).join("")}
+    </div>`;
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>LinkedIn Acquisition</h1>
+        <div class="sub">LinkedIn outreach · ${firstDate ? `first message logged ${fmtDateShort(firstDate)} · day ${daysRunning}` : "no activity logged yet"}</div>
+      </div>
+      <div class="topbar-right">
+        ${activeTab!=="dashboard"?`<button class="btn primary" data-open="b2bEntry">${icon("plus")} Log day</button>`:""}
+      </div>
+    </div>
+    <div class="content">
+      ${activeTab==="dashboard" ? renderB2BDashboard(months) : renderB2BMonth(activeTab)}
+      ${tabsHtml}
+    </div>
+  `;
+}
+function renderB2BMonth(monthKey){
+  const rows = b2bRowsForMonth(monthKey);
+  const monthTotals = b2bSumRows(rows);
+  const weeks = weeksForMonth(monthKey);
+  const weekRows = weeks.map(w=>Object.assign({ start:w.start, end:w.end }, b2bSumRows(b2bRowsForRange(w.start,w.end))));
+  const dailyRows = rows.slice().sort((a,b)=>a.date<b.date?1:-1);
+
+  const rates = b2bStageRates(monthTotals);
+
+  return `
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Monthly summary</h3><div class="sub">${b2bMonthLabel(monthKey)} — calculated live from the daily log below</div></div></div>
+      <div class="grid cols-4">
+        ${B2B_METRICS.map(m=>b2bStatCard(m.label, monthTotals[m.key], m.money, m.green)).join("")}
+      </div>
+      <div class="grid cols-5" style="margin-bottom:0">
+        ${rates.map(r=>rateCard(r.label, fmtRate(r.value))).join("")}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Weekly summary</h3><div class="sub">${b2bMonthLabel(monthKey)} — Monday–Sunday weeks touching this month</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Week</th>${B2B_METRICS.map(m=>`<th class="num">${m.label}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${weekRows.map((w,i)=>`<tr><td>Week ${i+1} <span class="cell-muted">${fmtDateShort(w.start)}–${fmtDateShort(w.end)}</span></td>${B2B_METRICS.map(m=>b2bMetricCell(m,w[m.key])).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div><h3>Daily log</h3><div class="sub">${dailyRows.length} ${dailyRows.length===1?"entry":"entries"} this month${dailyRows.some(r=>r.fromSheet)?` · some rows synced from the tracker sheet (last pulled ${fmtDateLong(B2B_SHEET_SYNCED_AT)}) · log there, then ask Claude to sync`:""}</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th>${B2B_METRICS.map(m=>`<th class="num">${m.label}</th>`).join("")}<th></th></tr></thead>
+          <tbody>
+            ${dailyRows.length? dailyRows.map(r=>`
+              <tr>
+                <td>${fmtDateShort(r.date)} ${r.fromSheet?`<span class="badge good" title="Synced from Google Sheet">sheet</span>`:""}</td>
+                ${B2B_METRICS.map(m=>b2bMetricCell(m,r[m.key])).join("")}
+                <td><div class="row-actions">
+                  <button class="icon-btn" data-edit-b2b="${r.id}">${icon("edit")}</button>
+                  <button class="icon-btn" data-del-b2b="${r.id}">${icon("trash")}</button>
+                </div></td>
+              </tr>`).join("") : `<tr class="empty-row"><td colspan="${B2B_METRICS.length+2}">No activity logged for ${b2bMonthLabel(monthKey)} yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function renderB2BDashboard(months){
+  const perMonth = months.map(mk=>{
+    const rows = b2bRowsForMonth(mk);
+    return { key:mk, hasData: rows.length>0, totals: b2bSumRows(rows) };
+  });
+  const grandTotal = {};
+  B2B_METRICS.forEach(m=>{ grandTotal[m.key] = perMonth.reduce((a,p)=>a+p.totals[m.key],0); });
+  const anyData = perMonth.some(p=>p.hasData);
+  return `
+    <div class="panel">
+      <div class="panel-head"><div><h3>Dashboard</h3><div class="sub">Overview across all months of ${todayStr().slice(0,4)}</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Stat</th>${perMonth.map(p=>`<th class="num">${b2bMonthLabel(p.key)}</th>`).join("")}<th class="num col-total">Totals</th></tr></thead>
+          <tbody>
+            ${B2B_METRICS.map(m=>`
+              <tr>
+                <td><b>${m.label}</b></td>
+                ${perMonth.map(p=>p.hasData?b2bMetricCell(m,p.totals[m.key]):'<td class="num cell-muted">—</td>').join("")}
+                <td class="num tnum col-total" style="font-weight:700">${anyData?(m.money?fmtMoney(grandTotal[m.key]):fmtNum(grandTotal[m.key])):"—"}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function barChart(values, color){
+  if(!values.some(v=>v>0)) return `<div class="empty-state" style="padding:20px 0">${icon("info")}<p>No data yet for this range.</p></div>`;
+  const max = Math.max(...values,1);
+  const w=560,h=140,gap=4,barW=(w/values.length)-gap;
+  const bars = values.map((v,i)=>{
+    const bh = (v/max)*(h-18);
+    const x = i*(barW+gap);
+    return `<rect x="${x.toFixed(1)}" y="${(h-bh).toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="2.5" fill="${color}" opacity="${i===values.length-1?1:0.55}"/>`;
+  }).join("");
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">
+    <line x1="0" y1="${h-0.5}" x2="${w}" y2="${h-0.5}" stroke="var(--border)" stroke-width="1"/>
+    ${bars}
+  </svg></div>`;
+}
+
+/* ============================= ADS (Client campaign tracker) ============================= */
+function adsFiltered(period, clientId){
+  return state.adsLog.filter(r=> inPeriod(r.date, period) && (clientId==="all" || r.clientId===clientId) ).sort((a,b)=>a.date<b.date?1:-1);
+}
+function adsAgg(period, clientId){
+  const rows = state.adsLog.filter(r=> inPeriod(r.date, period) && (clientId==="all" || r.clientId===clientId));
+  const bookings = sum(rows,"bookings"), cancellations = sum(rows,"cancellations"), reschedules = sum(rows,"reschedules");
+  const noShows = sum(rows,"noShows"), liveCalls = sum(rows,"liveCalls"), offersMade = sum(rows,"offersMade");
+  const closedDeals = sum(rows,"closedDeals"), cashCollected = sum(rows,"cashCollected");
+  let followUps=0, notClosedYet=0;
+  const sortedRows = rows.slice().sort((a,b)=>a.date<b.date?-1:1);
+  if(clientId!=="all" && sortedRows.length){
+    const latest = sortedRows[sortedRows.length-1];
+    followUps = Number(latest.followUps)||0; notClosedYet = Number(latest.notClosedYet)||0;
+  } else {
+    followUps = sum(rows,"followUps"); notClosedYet = sum(rows,"notClosedYet");
+  }
+  return {
+    bookings, cancellations, reschedules, noShows, liveCalls, offersMade, closedDeals, cashCollected, followUps, notClosedYet,
+    cancellationRate: safeDiv(cancellations, bookings),
+    showRate: safeDiv(liveCalls, bookings),
+    closeRate: safeDiv(closedDeals, liveCalls),
+    offerCloseRate: safeDiv(closedDeals, offersMade),
+  };
+}
+function leadsFiltered(clientId){
+  return state.leadsLog.filter(r=>clientId==="all"||r.clientId===clientId).sort((a,b)=>a.date<b.date?1:-1);
+}
+function needsFollowUp(clientId){
+  return leadsFiltered(clientId).filter(r=>FOLLOW_UP_OUTCOMES.includes(r.outcome));
+}
+function outcomeBadgeClass(outcome){
+  if(CLOSED_OUTCOMES.includes(outcome)) return "good";
+  if(FOLLOW_UP_OUTCOMES.includes(outcome)) return "warn";
+  return "bad";
+}
+function viewAds(){
+  const period = uiState.adsPeriod, clientId = uiState.adsClient;
+  const agg = adsAgg(period, clientId);
+  const t = state.settings.targets;
+  const rows = adsFiltered(period, clientId);
+  const client = clientId!=="all" ? state.clients.find(c=>c.id===clientId) : null;
+
+  const funnelSteps = [
+    { name:"Bookings", value: agg.bookings },
+    { name:"Live calls", value: agg.liveCalls },
+    { name:"Offers made", value: agg.offersMade },
+    { name:"Closed deals", value: agg.closedDeals },
+  ];
+  const maxStep = Math.max(...funnelSteps.map(s=>s.value), 1);
+
+  const trendDays = 14;
+  const trendVals = [];
+  for(let i=trendDays-1;i>=0;i--){
+    const d = daysAgo(i);
+    trendVals.push(sum(state.adsLog.filter(r=>r.date===d && (clientId==="all"||r.clientId===clientId)),"cashCollected"));
+  }
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Client Ads Performance</h1>
+        <div class="sub">${client?client.company:"All clients"} · bookings → shows → closes → cash collected</div>
+      </div>
+      <div class="topbar-right">
+        <select id="adsClientSelect">
+          <option value="all" ${clientId==="all"?"selected":""}>All clients</option>
+          ${state.clients.map(c=>`<option value="${c.id}" ${clientId===c.id?"selected":""}>${c.company}</option>`).join("")}
+        </select>
+        <div class="seg" id="adsPeriodSeg">
+          ${["today","7d","30d","mtd","all"].map(p=>`<button data-period="${p}" class="${uiState.adsPeriod===p?"active":""}">${p.toUpperCase()}</button>`).join("")}
+        </div>
+        <button class="btn ghost" data-open="targets" data-target-group="ads">${icon("gear")} Targets</button>
+        <button class="btn primary" data-open="adsEntry">${icon("plus")} Log day</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="grid cols-4">
+        <div class="card stat">
+          <div class="label">Bookings</div>
+          <div class="value-row"><span class="value tnum">${fmtNum(agg.bookings)}</span></div>
+          <div class="caption">${fmtNum(agg.reschedules)} reschedules</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Cancellation rate</div>
+          <div class="value-row"><span class="value tnum">${fmtPct(agg.cancellationRate)}</span> ${badgeFor(agg.cancellationRate, t.cancellationRate, "lower")}</div>
+          <div class="caption">${fmtNum(agg.cancellations)} cancelled · ${fmtNum(agg.noShows)} no-shows</div>
+          <div class="target-line">Target ≤ ${t.cancellationRate}%</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Show rate</div>
+          <div class="value-row"><span class="value tnum">${fmtPct(agg.showRate)}</span> ${badgeFor(agg.showRate, t.showRate, "higher")}</div>
+          <div class="caption">${fmtNum(agg.liveCalls)} live calls of ${fmtNum(agg.bookings)} booked</div>
+          <div class="target-line">Target ≥ ${t.showRate}%</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Cash collected</div>
+          <div class="value-row"><span class="value tnum">${fmtMoney(agg.cashCollected)}</span></div>
+          <div class="caption">${fmtNum(agg.closedDeals)} closed deals</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Close rate</div>
+          <div class="value-row"><span class="value tnum">${fmtPct(agg.closeRate)}</span> ${badgeFor(agg.closeRate, t.closeRate, "higher")}</div>
+          <div class="caption">closed ÷ live calls</div>
+          <div class="target-line">Target ≥ ${t.closeRate}%</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Offer → close rate</div>
+          <div class="value-row"><span class="value tnum">${fmtPct(agg.offerCloseRate)}</span> ${badgeFor(agg.offerCloseRate, t.offerCloseRate, "higher")}</div>
+          <div class="caption">${fmtNum(agg.offersMade)} offers made</div>
+          <div class="target-line">Target ≥ ${t.offerCloseRate}%</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Follow ups (open)</div>
+          <div class="value-row"><span class="value tnum">${fmtNum(agg.followUps)}</span></div>
+          <div class="caption">${clientId==="all"?"summed across clients":"as of latest logged day"}</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Not closed yet</div>
+          <div class="value-row"><span class="value tnum">${fmtNum(agg.notClosedYet)}</span></div>
+          <div class="caption">still pending a decision</div>
+        </div>
+      </div>
+
+      <div class="panel-row">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Booking-to-close funnel</h3><div class="sub">Bookings → live calls → offers → closed</div></div></div>
+          ${funnelSteps.map((s,i)=>{
+            const pct = i===0?100:(funnelSteps[i-1].value? (s.value/funnelSteps[i-1].value*100):0);
+            return `<div class="funnel-row">
+              <div class="fname">${s.name}</div>
+              <div class="funnel-track"><div class="funnel-fill" style="width:${maxStep? (s.value/maxStep*100):0}%"></div></div>
+              <div class="fcount tnum">${fmtNum(s.value)}</div>
+              <div class="fpct tnum">${i===0?"":fmtPct(pct,0)}</div>
+            </div>`;
+          }).join("")}
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>Cash collected — last 14 days</h3></div></div>
+          ${barChart(trendVals, "var(--good)")}
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><h3>Daily log</h3><div class="sub">${rows.length} ${rows.length===1?"entry":"entries"} in range</div></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Date</th>${clientId==="all"?"<th>Client</th>":""}<th class="num">Bookings</th><th class="num">Cancel</th><th class="num">Resched</th>
+              <th class="num">No-shows</th><th class="num">Live calls</th><th class="num">Offers</th><th class="num">Closed</th><th class="num">Cash</th><th></th>
+            </tr></thead>
+            <tbody>
+              ${rows.length? rows.map(r=>{
+                const c = state.clients.find(x=>x.id===r.clientId);
+                return `<tr>
+                  <td>${fmtDateShort(r.date)}</td>
+                  ${clientId==="all"?`<td class="cell-muted">${c?c.company:"—"}</td>`:""}
+                  <td class="num tnum">${fmtNum(r.bookings)}</td>
+                  <td class="num tnum">${fmtNum(r.cancellations)}</td>
+                  <td class="num tnum">${fmtNum(r.reschedules)}</td>
+                  <td class="num tnum">${fmtNum(r.noShows)}</td>
+                  <td class="num tnum">${fmtNum(r.liveCalls)}</td>
+                  <td class="num tnum">${fmtNum(r.offersMade)}</td>
+                  <td class="num tnum">${fmtNum(r.closedDeals)}</td>
+                  <td class="num tnum">${fmtMoney(r.cashCollected)}</td>
+                  <td><div class="row-actions">
+                    <button class="icon-btn" data-edit-ads="${r.id}">${icon("edit")}</button>
+                    <button class="icon-btn" data-del-ads="${r.id}">${icon("trash")}</button>
+                  </div></td>
+                </tr>`;
+              }).join("") : `<tr class="empty-row"><td colspan="10">${state.clients.length? "No ad activity logged in this range yet." : "Add a client first, then log daily ad performance here."}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      ${renderFollowUpPanel(clientId)}
+
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Leads</h3><div class="sub">${leadsFiltered(clientId).length} lead${leadsFiltered(clientId).length===1?"":"s"} tracked${clientId==="all"?" across all clients":""}</div></div>
+          <button class="btn primary sm" data-open="leadEntry">${icon("plus")} Add lead</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Date</th>${clientId==="all"?"<th>Client</th>":""}<th>Lead</th><th>Outcome</th><th>Offer</th><th class="num">Cash</th><th>Notes</th><th></th>
+            </tr></thead>
+            <tbody>
+              ${leadsFiltered(clientId).length? leadsFiltered(clientId).map(l=>{
+                const c = state.clients.find(x=>x.id===l.clientId);
+                return `<tr>
+                  <td>${fmtDateShort(l.date)}</td>
+                  ${clientId==="all"?`<td class="cell-muted">${c?c.company:"—"}</td>`:""}
+                  <td><b>${l.leadName}</b></td>
+                  <td><span class="badge ${outcomeBadgeClass(l.outcome)}">${l.outcome}</span></td>
+                  <td class="cell-muted">${l.offerMade?"yes":"no"}</td>
+                  <td class="num tnum">${l.cash?fmtMoney(l.cash):"—"}</td>
+                  <td class="cell-muted" style="white-space:normal;max-width:260px">${l.notes||"—"}</td>
+                  <td><div class="row-actions">
+                    <button class="icon-btn" data-edit-lead="${l.id}">${icon("edit")}</button>
+                    <button class="icon-btn" data-del-lead="${l.id}">${icon("trash")}</button>
+                  </div></td>
+                </tr>`;
+              }).join("") : `<tr class="empty-row"><td colspan="8">${state.clients.length? "No leads logged yet — add one to start tracking outcomes and follow-ups." : "Add a client first, then track individual leads and outcomes here."}</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFollowUpPanel(clientId){
+  const rows = needsFollowUp(clientId);
+  if(!rows.length) return "";
+  return `
+      <div class="panel" style="border-color:rgba(224,136,62,.32);background:linear-gradient(180deg,rgba(224,136,62,.06),var(--surface));margin-bottom:12px">
+        <div class="panel-head">
+          <div><h3>${icon("info")} Needs follow-up</h3><div class="sub">Follow up, Rescheduled, No-Show or Cancelled — nothing closed here yet</div></div>
+          <span class="badge warn">${rows.length} lead${rows.length===1?"":"s"}</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th>${clientId==="all"?"<th>Client</th>":""}<th>Lead</th><th>Outcome</th><th>Notes</th><th></th></tr></thead>
+            <tbody>
+              ${rows.map(l=>{
+                const c = state.clients.find(x=>x.id===l.clientId);
+                return `<tr>
+                  <td>${fmtDateShort(l.date)}</td>
+                  ${clientId==="all"?`<td class="cell-muted">${c?c.company:"—"}</td>`:""}
+                  <td><b>${l.leadName}</b></td>
+                  <td><span class="badge ${outcomeBadgeClass(l.outcome)}">${l.outcome}</span></td>
+                  <td class="cell-muted" style="white-space:normal;max-width:260px">${l.notes||"—"}</td>
+                  <td><div class="row-actions"><button class="icon-btn" data-edit-lead="${l.id}">${icon("edit")}</button></div></td>
+                </tr>`;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+}
+
+/* ============================= ADS ACQUISITION =============================
+   Calculation layer: every summary number here is DERIVED from adsAcqLeads.
+   Nothing in the Monthly/Weekly Summary or Dashboard is ever hand-entered
+   except the five ad-platform inputs (Ad Spend, LP Views, Paid Trials,
+   Full Package, Revenue) that have no lead-level equivalent. */
+const SECOND_CALL_OUTCOMES = ["N/A","Main offer closed","Special Payment","Deposit","Follow up","Offer & Didn't Buy","Rescheduled","No-Show","Cancelled","Bad Fit / No Offer"];
+function aaMonthKey(dateStr){ return dateStr.slice(0,7); }
+function aaAvailableMonths(){
+  const year = todayStr().slice(0,4);
+  const out = [];
+  for(let m=1;m<=12;m++) out.push(year+"-"+String(m).padStart(2,"0"));
+  return out;
+}
+function aaLeadsForMonth(mk){ return state.adsAcqLeads.filter(l=>aaMonthKey(l.date)===mk); }
+function aaMonthlyInput(mk){ return Object.assign({ adSpend:0, lpViews:0, paidTrials:0, fullPackage:0, revenue:0 }, state.adsAcqMonthly[mk]||{}); }
+function aaSetMonthlyInput(mk, patch){ state.adsAcqMonthly[mk] = Object.assign(aaMonthlyInput(mk), patch); save(); }
+function fmtRate(v, digits=0){ return (v===null||v===undefined||!isFinite(v)) ? "—" : v.toFixed(digits)+"%"; }
+function safeRatio(num, den){ return den ? num/den*100 : null; }
+function safeDivRaw(num, den){ return den ? num/den : null; }
+
+function calcSalesMetrics(leads){
+  const bookings = leads.length;
+  const cancellations = leads.filter(l=>l.outcome==="Cancelled").length;
+  const noShows = leads.filter(l=>l.outcome==="No-Show").length;
+  const reschedules = leads.filter(l=>l.outcome==="Rescheduled").length;
+  const liveCalls = leads.filter(l=>SHOWED_OUTCOMES.includes(l.outcome)).length;
+  const closedDeals = leads.filter(l=>CLOSED_OUTCOMES.includes(l.outcome)).length;
+  const offersReceived = leads.filter(l=>l.offerMade).length;
+  const cashCollected = leads.filter(l=>CLOSED_OUTCOMES.includes(l.outcome)).reduce((a,l)=>a+(Number(l.cash)||0),0);
+  const followUpsOpen = leads.filter(l=>l.outcome==="Follow up").length;
+  return {
+    bookings, liveCalls, cancellations, noShows, reschedules, closedDeals, cashCollected, followUpsOpen, offersReceived,
+    showRate: safeRatio(liveCalls, bookings),
+    cancellationRate: safeRatio(cancellations, bookings),
+    showUpRate: safeRatio(liveCalls, bookings-cancellations),
+    closeRate: safeRatio(closedDeals, liveCalls),
+    offerToCloseRate: safeRatio(closedDeals, offersReceived),
+  };
+}
+function addDays(dateStr, n){
+  const d = new Date(dateStr+"T00:00:00");
+  d.setDate(d.getDate()+n);
+  return localDateStr(d);
+}
+function mondayOnOrBefore(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day===0?-6:1-day));
+  return localDateStr(d);
+}
+function weeksForMonth(mk){
+  const [y,m] = mk.split("-").map(Number);
+  const lastDayNum = new Date(y,m,0).getDate();
+  const monthEnd = `${mk}-${String(lastDayNum).padStart(2,"0")}`;
+  let cursor = mondayOnOrBefore(`${mk}-01`);
+  const weeks = [];
+  let idx=1;
+  while(cursor <= monthEnd){
+    weeks.push({ n: idx, start: cursor, end: addDays(cursor,6) });
+    cursor = addDays(cursor, 7);
+    idx++;
+  }
+  return weeks;
+}
+function aaMonthClosers(mk){ return Array.from(new Set(aaLeadsForMonth(mk).map(l=>l.closerName).filter(Boolean))).sort(); }
+function aaFilteredSortedLeads(mk){
+  const f = uiState.aaFilters;
+  const weeks = weeksForMonth(mk);
+  let rows = aaLeadsForMonth(mk).filter(l=>{
+    if(f.closer!=="all" && l.closerName!==f.closer) return false;
+    if(f.outcome!=="all" && l.outcome!==f.outcome) return false;
+    if(f.offer!=="all" && String(!!l.offerMade)!==f.offer) return false;
+    if(f.closedPitched!=="all" && String(!!l.offerClosedPitched)!==f.closedPitched) return false;
+    if(f.week!=="all"){
+      const wk = weeks.find(w=>l.date>=w.start && l.date<=w.end);
+      if(!wk || String(wk.n)!==f.week) return false;
+    }
+    if(f.search && !l.leadName.toLowerCase().includes(f.search.toLowerCase())) return false;
+    return true;
+  });
+  rows.sort((a,b)=>{
+    let av=a[f.sortBy], bv=b[f.sortBy];
+    if(f.sortBy==="cash"){ av=Number(av)||0; bv=Number(bv)||0; }
+    else { av=String(av||"").toLowerCase(); bv=String(bv||"").toLowerCase(); }
+    const cmp = av<bv?-1:av>bv?1:0;
+    return f.sortDir==="asc"?cmp:-cmp;
+  });
+  return rows;
+}
+function aaMetricCard(label, value, sub){
+  return `<div class="card stat hero"><div class="label">${label}</div><div class="value-row"><span class="value tnum">${value}</span></div>${sub?`<div class="caption">${sub}</div>`:""}</div>`;
+}
+function viewAdsAcq(){
+  const months = aaAvailableMonths();
+  const curMonth = todayStr().slice(0,7);
+  if(uiState.aaTab!=="dashboard" && !months.includes(uiState.aaTab)) uiState.aaTab = curMonth;
+  const activeTab = uiState.aaTab;
+  const tabsHtml = `
+    <div class="b2b-tabbar">
+      <button class="b2b-tab ${activeTab==='dashboard'?'active':''}" data-aa-tab="dashboard">${icon("briefcase")} Dashboard</button>
+      ${months.map(mk=>`<button class="b2b-tab ${activeTab===mk?'active':''}" data-aa-tab="${mk}">${b2bMonthLabel(mk)}${mk===curMonth?'<span class="tab-dot"></span>':''}</button>`).join("")}
+    </div>`;
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Ads Acquisition</h1>
+        <div class="sub">Paid ads → leads → closer calls → sales · ${state.adsAcqLeads.length} lead${state.adsAcqLeads.length===1?"":"s"} tracked</div>
+      </div>
+      <div class="topbar-right">
+        ${activeTab!=="dashboard"?`<button class="btn primary" data-open="aaLead">${icon("plus")} Add lead</button>`:""}
+      </div>
+    </div>
+    <div class="content">
+      ${activeTab==="dashboard" ? renderAADashboard(months) : renderAAMonth(activeTab)}
+      ${tabsHtml}
+    </div>
+  `;
+}
+function renderAAMonth(mk){
+  const leads = aaLeadsForMonth(mk);
+  const m = calcSalesMetrics(leads);
+  const weeks = weeksForMonth(mk);
+  const weekMetrics = weeks.map(w=>({ w, m: calcSalesMetrics(leads.filter(l=>l.date>=w.start && l.date<=w.end)) }));
+  const closers = aaMonthClosers(mk);
+  const f = uiState.aaFilters;
+  const rows = aaFilteredSortedLeads(mk);
+
+  return `
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Monthly summary</h3><div class="sub">${b2bMonthLabel(mk)} — calculated live from the leads below</div></div></div>
+      <div class="grid cols-4">
+        ${aaMetricCard("Bookings", fmtNum(m.bookings))}
+        ${aaMetricCard("Live calls", fmtNum(m.liveCalls))}
+        ${aaMetricCard("Cancellations", fmtNum(m.cancellations))}
+        ${aaMetricCard("No-shows", fmtNum(m.noShows))}
+        ${aaMetricCard("Reschedules", fmtNum(m.reschedules))}
+        ${aaMetricCard("Closed deals", fmtNum(m.closedDeals))}
+        ${aaMetricCard("Cash collected", fmtMoney(m.cashCollected))}
+        ${aaMetricCard("Follow ups not closed yet", fmtNum(m.followUpsOpen))}
+      </div>
+      <div class="grid cols-5" style="margin-bottom:0">
+        ${rateCard("Show rate", fmtRate(m.showRate))}
+        ${rateCard("Show-up rate", fmtRate(m.showUpRate))}
+        ${rateCard("Cancellation rate", fmtRate(m.cancellationRate))}
+        ${rateCard("Close rate", fmtRate(m.closeRate))}
+        ${rateCard("Offer→close rate", fmtRate(m.offerToCloseRate))}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Weekly summary</h3><div class="sub">${b2bMonthLabel(mk)} — Monday–Sunday weeks touching this month</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Week</th><th class="num">Bookings</th><th class="num">Live calls</th><th class="num">Show rate</th><th class="num">Cancel rate</th><th class="num">Closed</th><th class="num">Close rate</th><th class="num">Offer→close</th><th class="num">Cash collected</th><th class="num">Open follow-ups</th></tr></thead>
+          <tbody>
+            ${weekMetrics.map(({w,m})=>`
+              <tr>
+                <td>Week ${w.n} <span class="cell-muted">${fmtDateShort(w.start)}–${fmtDateShort(w.end)}</span></td>
+                <td class="num tnum">${fmtNum(m.bookings)}</td>
+                <td class="num tnum">${fmtNum(m.liveCalls)}</td>
+                <td class="num tnum">${fmtRate(m.showRate)}</td>
+                <td class="num tnum">${fmtRate(m.cancellationRate)}</td>
+                <td class="num tnum">${fmtNum(m.closedDeals)}</td>
+                <td class="num tnum">${fmtRate(m.closeRate)}</td>
+                <td class="num tnum">${fmtRate(m.offerToCloseRate)}</td>
+                <td class="num tnum">${fmtMoney(m.cashCollected)}</td>
+                <td class="num tnum">${fmtNum(m.followUpsOpen)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div><h3>Leads</h3><div class="sub">${rows.length} of ${leads.length} lead${leads.length===1?"":"s"} shown</div></div>
+      </div>
+      <div class="aa-filterbar">
+        <div class="aa-search"><span>${icon("search")}</span><input type="text" placeholder="Search lead name…" value="${f.search}" data-aa-filter="search" /></div>
+        <select data-aa-filter="closer"><option value="all">All closers</option>${closers.map(c=>`<option ${f.closer===c?"selected":""}>${c}</option>`).join("")}</select>
+        <select data-aa-filter="outcome"><option value="all">All outcomes</option>${OUTCOMES.map(o=>`<option ${f.outcome===o?"selected":""}>${o}</option>`).join("")}</select>
+        <select data-aa-filter="offer"><option value="all">Offer: any</option><option value="true" ${f.offer==="true"?"selected":""}>Offer: yes</option><option value="false" ${f.offer==="false"?"selected":""}>Offer: no</option></select>
+        <select data-aa-filter="closedPitched"><option value="all">Closed/pitched: any</option><option value="true" ${f.closedPitched==="true"?"selected":""}>Yes</option><option value="false" ${f.closedPitched==="false"?"selected":""}>No</option></select>
+        <select data-aa-filter="week"><option value="all">All weeks</option>${weeks.map(w=>`<option value="${w.n}" ${f.week===String(w.n)?"selected":""}>Week ${w.n}</option>`).join("")}</select>
+        <select data-aa-filter="sortBy"><option value="date" ${f.sortBy==="date"?"selected":""}>Sort: Date</option><option value="leadName" ${f.sortBy==="leadName"?"selected":""}>Sort: Lead name</option><option value="outcome" ${f.sortBy==="outcome"?"selected":""}>Sort: Outcome</option><option value="cash" ${f.sortBy==="cash"?"selected":""}>Sort: Cash</option></select>
+        <button class="btn ghost sm" data-aa-sort-dir>${f.sortDir==="asc"?"↑ Asc":"↓ Desc"}</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Closer</th><th>Date</th><th>Lead</th><th>Outcome</th><th>2nd call outcome</th><th>Closed/pitched</th><th class="num">Cash</th><th>Offer</th><th>Recording</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${rows.length? rows.map(l=>`
+              <tr>
+                <td class="cell-muted">${l.closerName||"—"}</td>
+                <td>${fmtDateShort(l.date)}</td>
+                <td><b>${l.leadName}</b></td>
+                <td><span class="badge ${outcomeBadgeClass(l.outcome)}">${l.outcome}</span></td>
+                <td class="cell-muted">${l.secondCallOutcome&&l.secondCallOutcome!=="N/A"?l.secondCallOutcome:"—"}</td>
+                <td class="cell-muted">${l.offerClosedPitched?"yes":"no"}</td>
+                <td class="num tnum">${l.cash?fmtMoney(l.cash):"—"}</td>
+                <td class="cell-muted">${l.offerMade?"yes":"no"}</td>
+                <td>${l.recordingLink?`<a class="btn ghost sm" href="${l.recordingLink}" target="_blank" rel="noopener">${icon("link")}</a>`:'<span class="cell-muted">—</span>'}</td>
+                <td><div class="row-actions">
+                  <button class="icon-btn" data-edit-aa-lead="${l.id}">${icon("edit")}</button>
+                  <button class="icon-btn" data-del-aa-lead="${l.id}">${icon("trash")}</button>
+                </div></td>
+              </tr>`).join("") : `<tr class="empty-row"><td colspan="10">${leads.length? "No leads match these filters." : `No leads logged for ${b2bMonthLabel(mk)} yet.`}</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function aaCalcDashboardRow(mk){
+  const leads = aaLeadsForMonth(mk);
+  const s = calcSalesMetrics(leads);
+  const inp = aaMonthlyInput(mk);
+  const newPayingClients = s.closedDeals;
+  const lpPct = safeRatio(leads.length, inp.lpViews);
+  const cpl = safeDivRaw(inp.adSpend, leads.length);
+  const vcrPct = safeRatio(s.bookings, leads.length);
+  const cpss = safeDivRaw(inp.adSpend, s.bookings);
+  const supPct = safeRatio(s.liveCalls, s.bookings);
+  const cpssT = safeDivRaw(inp.adSpend, s.liveCalls);
+  const ccPct = safeRatio(newPayingClients, s.liveCalls);
+  const lcPct = safeRatio(newPayingClients, leads.length);
+  const cpft = safeDivRaw(inp.adSpend, (inp.paidTrials+inp.fullPackage));
+  const cpa = safeDivRaw(inp.adSpend, newPayingClients);
+  const rpl = inp.revenue - inp.adSpend;
+  const cashPL = s.cashCollected - inp.adSpend;
+  const rroi = inp.adSpend ? rpl/inp.adSpend*100 : null;
+  const croi = inp.adSpend ? cashPL/inp.adSpend*100 : null;
+  return {
+    mk, adSpend:inp.adSpend, leads:leads.length, lpViews:inp.lpViews, lpPct, cpl,
+    callsBooked:s.bookings, vcrPct, cpss, callsTaken:s.liveCalls, supPct, cpssT,
+    paidTrials:inp.paidTrials, fullPackage:inp.fullPackage, newPayingClients, ccPct, lcPct, cpft,
+    revenue:inp.revenue, newCashCollected:s.cashCollected, cpa, rpl, cashPL, rroi, croi,
+    hasActivity: leads.length>0 || inp.adSpend>0,
+  };
+}
+const AA_DASHBOARD_COLS = [
+  { key:"adSpend", label:"Ad Spend", money:true, editable:true },
+  { key:"leads", label:"Leads" },
+  { key:"lpViews", label:"LP Views", editable:true },
+  { key:"lpPct", label:"LP%", pct:true },
+  { key:"cpl", label:"CPL", moneyRate:true },
+  { key:"callsBooked", label:"Calls Booked" },
+  { key:"vcrPct", label:"VCR-%", pct:true },
+  { key:"cpss", label:"CPSS", moneyRate:true },
+  { key:"callsTaken", label:"Calls Taken" },
+  { key:"supPct", label:"SUP-%", pct:true },
+  { key:"cpssT", label:"CPSS-T", moneyRate:true },
+  { key:"paidTrials", label:"Paid Trials", editable:true },
+  { key:"fullPackage", label:"Full Package", editable:true },
+  { key:"newPayingClients", label:"New Paying Clients" },
+  { key:"ccPct", label:"CC%", pct:true },
+  { key:"lcPct", label:"LC%", pct:true },
+  { key:"cpft", label:"CPFT", moneyRate:true },
+  { key:"revenue", label:"Revenue", money:true, editable:true },
+  { key:"newCashCollected", label:"New Cash Collected", money:true },
+  { key:"cpa", label:"CPA", moneyRate:true },
+  { key:"rpl", label:"R-P/L", money:true },
+  { key:"cashPL", label:"C-P/L", money:true },
+  { key:"rroi", label:"R-ROI", pct:true },
+  { key:"croi", label:"C-ROI", pct:true },
+];
+function aaDashCell(col, row){
+  const v = row[col.key];
+  if(col.editable){
+    return `<td class="num"><input type="number" min="0" class="aa-inline-input" value="${v||""}" data-aa-monthly-input="${row.mk}|${col.key}" /></td>`;
+  }
+  if(!row.hasActivity && (v===0||v===null)) return `<td class="num cell-muted">—</td>`;
+  if(col.pct) return `<td class="num tnum">${fmtRate(v)}</td>`;
+  if(col.moneyRate) return `<td class="num tnum">${v===null?"—":fmtMoney(v)}</td>`;
+  if(col.money) return `<td class="num tnum">${fmtMoney(v)}</td>`;
+  return `<td class="num tnum">${fmtNum(v)}</td>`;
+}
+function renderAADashboard(months){
+  const rows = months.map(mk=>aaCalcDashboardRow(mk));
+  const totals = { mk:"Total", hasActivity: rows.some(r=>r.hasActivity) };
+  ["adSpend","leads","lpViews","callsBooked","callsTaken","paidTrials","fullPackage","newPayingClients","revenue","newCashCollected"].forEach(k=>{
+    totals[k] = rows.reduce((a,r)=>a+(r[k]||0),0);
+  });
+  totals.lpPct = safeRatio(totals.leads, totals.lpViews);
+  totals.cpl = safeDivRaw(totals.adSpend, totals.leads);
+  totals.vcrPct = safeRatio(totals.callsBooked, totals.leads);
+  totals.cpss = safeDivRaw(totals.adSpend, totals.callsBooked);
+  totals.supPct = safeRatio(totals.callsTaken, totals.callsBooked);
+  totals.cpssT = safeDivRaw(totals.adSpend, totals.callsTaken);
+  totals.ccPct = safeRatio(totals.newPayingClients, totals.callsTaken);
+  totals.lcPct = safeRatio(totals.newPayingClients, totals.leads);
+  totals.cpft = safeDivRaw(totals.adSpend, totals.paidTrials+totals.fullPackage);
+  totals.cpa = safeDivRaw(totals.adSpend, totals.newPayingClients);
+  totals.rpl = totals.revenue - totals.adSpend;
+  totals.cashPL = totals.newCashCollected - totals.adSpend;
+  totals.rroi = totals.adSpend? totals.rpl/totals.adSpend*100 : null;
+  totals.croi = totals.adSpend? totals.cashPL/totals.adSpend*100 : null;
+
+  return `
+    <div class="panel">
+      <div class="panel-head">
+        <div><h3>Dashboard</h3><div class="sub">Ad performance across all months of ${todayStr().slice(0,4)} · Leads, Calls Booked, Calls Taken, New Paying Clients & New Cash Collected are pulled automatically from each month's lead table</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th>${AA_DASHBOARD_COLS.map(c=>`<th class="num">${c.label}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${rows.map(r=>`<tr><td><b>${b2bMonthLabel(r.mk)}</b></td>${AA_DASHBOARD_COLS.map(c=>aaDashCell(c,r)).join("")}</tr>`).join("")}
+            <tr class="row-total"><td>Total</td>${AA_DASHBOARD_COLS.map(c=>c.editable?`<td class="num tnum">${c.money?fmtMoney(totals[c.key]):fmtNum(totals[c.key])}</td>`:aaDashCell(c,totals)).join("")}</tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function aaLeadModal(id){
+  const row = id ? state.adsAcqLeads.find(l=>l.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${row?"Edit":"Add"} lead</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Closer name</label><input id="f_closerName" placeholder="e.g. Vanessa" value="${row?row.closerName||"":""}" /></div>
+        <div class="field"><label>Date</label><input type="date" id="f_date" value="${row?row.date:todayStr()}" /></div>
+        <div class="field field-span2"><label>Lead name</label><input id="f_leadName" placeholder="e.g. John Stason" value="${row?row.leadName:""}" /></div>
+        <div class="field"><label>Outcome</label><select id="f_outcome">${OUTCOMES.map(o=>`<option ${row&&row.outcome===o?"selected":""}>${o}</option>`).join("")}</select></div>
+        <div class="field"><label>Second call outcome</label><select id="f_secondCallOutcome">${SECOND_CALL_OUTCOMES.map(o=>`<option ${row&&row.secondCallOutcome===o?"selected":""}>${o}</option>`).join("")}</select></div>
+        <div class="field"><label>Offer closed/pitched?</label><select id="f_offerClosedPitched"><option value="false" ${row&&!row.offerClosedPitched?"selected":""}>No</option><option value="true" ${row&&row.offerClosedPitched?"selected":""}>Yes</option></select></div>
+        <div class="field"><label>Offer made?</label><select id="f_offerMade"><option value="false" ${row&&!row.offerMade?"selected":""}>No</option><option value="true" ${row&&row.offerMade?"selected":""}>Yes</option></select></div>
+        <div class="field"><label>Cash (£)</label><input type="number" min="0" id="f_cash" value="${row&&row.cash?row.cash:""}" /></div>
+        <div class="field field-span2"><label>Video call recording link</label><input id="f_recordingLink" placeholder="https://…" value="${row?row.recordingLink||"":""}" /></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${row?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save lead</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(row) document.getElementById("modalDelete").onclick = ()=>{ state.adsAcqLeads = state.adsAcqLeads.filter(l=>l.id!==id); save(); closeModal(); renderView(); toast("Lead deleted"); };
+  document.getElementById("modalSave").onclick = ()=>{
+    const leadName = document.getElementById("f_leadName").value.trim();
+    if(!leadName){ toast("Lead name required"); return; }
+    const entry = {
+      id: row?row.id:uid(),
+      closerName: document.getElementById("f_closerName").value.trim(),
+      date: document.getElementById("f_date").value || todayStr(),
+      leadName,
+      outcome: document.getElementById("f_outcome").value,
+      secondCallOutcome: document.getElementById("f_secondCallOutcome").value,
+      offerClosedPitched: document.getElementById("f_offerClosedPitched").value==="true",
+      offerMade: document.getElementById("f_offerMade").value==="true",
+      cash: +document.getElementById("f_cash").value||0,
+      recordingLink: document.getElementById("f_recordingLink").value.trim(),
+    };
+    if(row){ state.adsAcqLeads = state.adsAcqLeads.map(l=>l.id===id?entry:l); }
+    else{ state.adsAcqLeads.push(entry); }
+    uiState.aaTab = aaMonthKey(entry.date);
+    save(); closeModal(); renderView(); toast("Saved");
+  };
+}
+
+/* ============================= CLIENT MANAGEMENT ============================= */
+function clientCollected(clientId){ return sum(state.adsLog.filter(l=>l.clientId===clientId), "cashCollected"); }
+function viewClients(){
+  const filter = uiState.clientFilter, search = uiState.clientSearch.toLowerCase();
+  const rows = state.clients.filter(c=>{
+    if(filter!=="all" && c.status!==filter) return false;
+    if(search && !(c.company.toLowerCase().includes(search) || (c.contact||"").toLowerCase().includes(search))) return false;
+    return true;
+  });
+  const totalRunRate = sum(state.clients.filter(c=>c.status==="active"),"runRate");
+  const totalCollected = state.clients.reduce((a,c)=>a+clientCollected(c.id),0);
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Client Management</h1>
+        <div class="sub">${state.clients.length} client${state.clients.length===1?"":"s"} · CRM & ad accounts</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn primary" data-open="clientEntry">${icon("plus")} New client</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="grid cols-2">
+        <div class="card stat">
+          <div class="label">Active monthly run-rate</div>
+          <div class="value-row"><span class="value tnum">${fmtMoney(totalRunRate)}</span></div>
+          <div class="caption">${state.clients.filter(c=>c.status==="active").length} active clients</div>
+        </div>
+        <div class="card stat">
+          <div class="label">Total cash collected</div>
+          <div class="value-row"><span class="value tnum">${fmtMoney(totalCollected)}</span></div>
+          <div class="caption">from logged ad performance</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Clients</h3><div class="sub">Click edit to update status, model, or link an ad account</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="clientFilterSel">
+              ${["all","active","paused","churned"].map(s=>`<option value="${s}" ${filter===s?"selected":""}>${s==="all"?"All statuses":s[0].toUpperCase()+s.slice(1)}</option>`).join("")}
+            </select>
+            <input id="clientSearchInput" placeholder="Search clients…" value="${uiState.clientSearch}" />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Company</th><th>Contact</th><th>Status</th><th>Model</th><th class="num">Run-rate/mo</th><th>Tenure</th><th class="num">Collected</th><th>Ad account</th><th></th>
+            </tr></thead>
+            <tbody>
+              ${rows.length? rows.map(c=>{
+                const tenure = c.startDate ? Math.max(0, Math.round(daysBetween(c.startDate, todayStr())/30)) : 0;
+                return `<tr>
+                  <td><b>${c.company}</b></td>
+                  <td class="cell-muted">${c.contact||"—"}</td>
+                  <td><span class="pill ${c.status}">${c.status}</span></td>
+                  <td class="cell-muted">${c.model||"—"}</td>
+                  <td class="num tnum">${fmtMoney(c.runRate)}</td>
+                  <td class="cell-muted">${tenure} mo</td>
+                  <td class="num tnum">${fmtMoney(clientCollected(c.id))}</td>
+                  <td class="cell-muted">${c.adAccountId? `<span title="${c.adAccountId}">${icon("check")} linked</span>` : "not linked"}</td>
+                  <td><div class="row-actions">
+                    <button class="icon-btn" data-edit-client="${c.id}">${icon("edit")}</button>
+                    <button class="icon-btn" data-del-client="${c.id}">${icon("trash")}</button>
+                  </div></td>
+                </tr>`;
+              }).join("") : `<tr class="empty-row"><td colspan="9">No clients yet — add your first client to start tracking ad performance and cashflow.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================= FITNESS ============================= */
+function fitMonthKey(dateStr){ return dateStr.slice(0,7); }
+function fitAvailableMonths(){
+  const year = todayStr().slice(0,4);
+  const out = [];
+  for(let m=1;m<=12;m++) out.push(year+"-"+String(m).padStart(2,"0"));
+  return out;
+}
+function fitEntriesForMonth(mk){ return state.fitnessLog.filter(r=>fitMonthKey(r.date)===mk); }
+function fitCalcMetrics(entries){
+  const daysLogged = entries.length;
+  const withCal = entries.filter(e=>e.calories);
+  const totalCalories = sum(entries,"calories");
+  const avgCalories = withCal.length ? totalCalories/withCal.length : null;
+  const withProtein = entries.filter(e=>e.protein);
+  const avgProtein = withProtein.length ? sum(entries,"protein")/withProtein.length : null;
+  const withWeight = entries.filter(e=>e.weight).slice().sort((a,b)=>a.date<b.date?-1:1);
+  const startWeight = withWeight.length ? Number(withWeight[0].weight) : null;
+  const endWeight = withWeight.length ? Number(withWeight[withWeight.length-1].weight) : null;
+  const weightChange = (startWeight!==null && endWeight!==null) ? endWeight-startWeight : null;
+  const avgWeight = withWeight.length ? withWeight.reduce((a,e)=>a+Number(e.weight),0)/withWeight.length : null;
+  return { daysLogged, totalCalories, avgCalories, avgProtein, startWeight, endWeight, weightChange, avgWeight };
+}
+function fmtWeight(v, unit){ return (v===null||v===undefined) ? "—" : v.toFixed(1)+" "+unit; }
+function fmtWeightSigned(v, unit){ return (v===null||v===undefined) ? "—" : (v>0?"+":"")+v.toFixed(1)+" "+unit; }
+function viewFitness(){
+  const months = fitAvailableMonths();
+  const curMonth = todayStr().slice(0,7);
+  if(uiState.fitTab!=="dashboard" && !months.includes(uiState.fitTab)) uiState.fitTab = curMonth;
+  const activeTab = uiState.fitTab;
+  const allSorted = state.fitnessLog.slice().sort((a,b)=>a.date<b.date?-1:1);
+  const latest = allSorted[allSorted.length-1];
+
+  const tabsHtml = `
+    <div class="b2b-tabbar">
+      <button class="b2b-tab ${activeTab==='dashboard'?'active':''}" data-fit-tab="dashboard">${icon("briefcase")} Dashboard</button>
+      ${months.map(mk=>`<button class="b2b-tab ${activeTab===mk?'active':''}" data-fit-tab="${mk}">${b2bMonthLabel(mk)}${mk===curMonth?'<span class="tab-dot"></span>':''}</button>`).join("")}
+    </div>`;
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Fitness Tracker</h1>
+        <div class="sub">${latest? `latest: ${fmtDateShort(latest.date)}` : "no entries yet"}</div>
+      </div>
+      <div class="topbar-right">
+        ${activeTab!=="dashboard"?`<button class="btn primary" data-open="fitEntry">${icon("plus")} Log today</button>`:""}
+      </div>
+    </div>
+    <div class="content">
+      ${activeTab==="dashboard" ? renderFitDashboard(months) : renderFitMonth(activeTab)}
+      ${tabsHtml}
+    </div>
+  `;
+}
+function renderFitMonth(mk){
+  const unit = state.settings.weightUnit;
+  const entries = fitEntriesForMonth(mk);
+  const m = fitCalcMetrics(entries);
+  const weeks = weeksForMonth(mk);
+  const weekRows = weeks.map(w=>({ w, m: fitCalcMetrics(entries.filter(e=>e.date>=w.start && e.date<=w.end)) }));
+  const dailyRows = entries.slice().sort((a,b)=>a.date<b.date?1:-1);
+  const sheetRows = entries.filter(r=>r.fromSheet).length;
+
+  const [y,mm] = mk.split("-").map(Number);
+  const lastDay = new Date(y,mm,0).getDate();
+  const weightVals=[], calVals=[];
+  for(let d=1; d<=lastDay; d++){
+    const ds = `${mk}-${String(d).padStart(2,"0")}`;
+    const e = state.fitnessLog.find(r=>r.date===ds);
+    weightVals.push(e && e.weight ? Number(e.weight) : null);
+    calVals.push(e && e.calories ? Number(e.calories) : 0);
+  }
+
+  return `
+    <div class="panel" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="badge good">${icon("check")} google sheet</span>
+        <div>
+          <div style="font-size:12.5px;font-weight:600">Synced from your Calorie Tracker sheet</div>
+          <div class="sub" style="margin-top:1px">Last pulled ${fmtDateLong(SHEET_SYNCED_AT)} · ${sheetRows} of ${entries.length} entries this month came from the sheet · log there, then ask Claude to "sync my calories" to refresh</div>
+        </div>
+      </div>
+      <a class="btn ghost sm" href="${SHEET_SOURCE_URL}" target="_blank" rel="noopener">Open sheet</a>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Monthly summary</h3><div class="sub">${b2bMonthLabel(mk)} — calculated live from the daily log below</div></div></div>
+      <div class="grid cols-4" style="margin-bottom:0">
+        ${aaMetricCard("Days logged", fmtNum(m.daysLogged))}
+        ${aaMetricCard("Total calories", fmtNum(m.totalCalories))}
+        ${aaMetricCard("Avg calories/day", m.avgCalories===null?"—":fmtNum(Math.round(m.avgCalories)))}
+        ${aaMetricCard("Avg protein/day", m.avgProtein===null?"—":fmtNum(Math.round(m.avgProtein))+"g")}
+        ${aaMetricCard("Start weight", fmtWeight(m.startWeight, unit))}
+        ${aaMetricCard("End weight", fmtWeight(m.endWeight, unit))}
+        ${aaMetricCard("Weight change", fmtWeightSigned(m.weightChange, unit))}
+        ${aaMetricCard("Avg weight", fmtWeight(m.avgWeight, unit))}
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Weekly summary</h3><div class="sub">${b2bMonthLabel(mk)} — Monday–Sunday weeks touching this month</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Week</th><th class="num">Days logged</th><th class="num">Total calories</th><th class="num">Avg cal/day</th><th class="num">Avg protein</th><th class="num">Start weight</th><th class="num">End weight</th><th class="num">Weight change</th></tr></thead>
+          <tbody>
+            ${weekRows.map(({w,m})=>`
+              <tr>
+                <td>Week ${w.n} <span class="cell-muted">${fmtDateShort(w.start)}–${fmtDateShort(w.end)}</span></td>
+                <td class="num tnum">${fmtNum(m.daysLogged)}</td>
+                <td class="num tnum">${m.totalCalories?fmtNum(m.totalCalories):"—"}</td>
+                <td class="num tnum">${m.avgCalories===null?"—":fmtNum(Math.round(m.avgCalories))}</td>
+                <td class="num tnum">${m.avgProtein===null?"—":fmtNum(Math.round(m.avgProtein))+"g"}</td>
+                <td class="num tnum">${m.startWeight===null?"—":m.startWeight.toFixed(1)}</td>
+                <td class="num tnum">${m.endWeight===null?"—":m.endWeight.toFixed(1)}</td>
+                <td class="num tnum">${fmtWeightSigned(m.weightChange, "")}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div><h3>Daily log</h3><div class="sub">${dailyRows.length} ${dailyRows.length===1?"entry":"entries"} this month</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th class="num">Weight (${unit})</th><th class="num">Calories</th><th class="num">Protein</th><th>Food</th><th></th></tr></thead>
+          <tbody>
+            ${dailyRows.length? dailyRows.map(r=>`
+              <tr>
+                <td>${fmtDateShort(r.date)} ${r.fromSheet?`<span class="badge good" title="Synced from Google Sheet">sheet</span>`:""}</td>
+                <td class="num tnum">${r.weight?Number(r.weight).toFixed(1):"—"}</td>
+                <td class="num tnum">${r.calories?fmtNum(r.calories):"—"}</td>
+                <td class="num tnum">${r.protein?fmtNum(r.protein)+"g":"—"}</td>
+                <td class="cell-muted" style="white-space:normal;max-width:320px">${r.foods||"—"}</td>
+                <td><div class="row-actions">
+                  <button class="icon-btn" data-edit-fit="${r.id}">${icon("edit")}</button>
+                  <button class="icon-btn" data-del-fit="${r.id}">${icon("trash")}</button>
+                </div></td>
+              </tr>`).join("") : `<tr class="empty-row"><td colspan="6">No entries logged for ${b2bMonthLabel(mk)} yet.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function renderFitDashboard(months){
+  const unit = state.settings.weightUnit;
+  const perMonth = months.map(mk=>{
+    const entries = fitEntriesForMonth(mk);
+    return { key:mk, hasData: entries.length>0, m: fitCalcMetrics(entries) };
+  });
+  const yearEntries = state.fitnessLog.filter(r=>r.date.slice(0,4)===todayStr().slice(0,4));
+  const yearMetrics = fitCalcMetrics(yearEntries);
+  const cols = [
+    { key:"daysLogged", label:"Days logged" },
+    { key:"totalCalories", label:"Total calories" },
+    { key:"avgCalories", label:"Avg cal/day", round:true },
+    { key:"avgProtein", label:"Avg protein/day", round:true, suffix:"g" },
+    { key:"startWeight", label:"Start weight", weight:true },
+    { key:"endWeight", label:"End weight", weight:true },
+    { key:"weightChange", label:"Weight change", weight:true, signed:true },
+    { key:"avgWeight", label:"Avg weight", weight:true },
+  ];
+  function cell(col, m, hasData, isTotal){
+    const cls = "num"+(isTotal?" col-total":"");
+    if(!hasData) return `<td class="${cls} cell-muted">—</td>`;
+    const v = m[col.key];
+    if(v===null||v===undefined) return `<td class="${cls} cell-muted">—</td>`;
+    let out;
+    if(col.weight) out = col.signed ? fmtWeightSigned(v, unit) : fmtWeight(v, unit);
+    else if(col.round) out = fmtNum(Math.round(v))+(col.suffix||"");
+    else out = fmtNum(v);
+    return `<td class="${cls} tnum">${out}</td>`;
+  }
+  return `
+    <div class="panel">
+      <div class="panel-head"><div><h3>Dashboard</h3><div class="sub">Overview across all months of ${todayStr().slice(0,4)}</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Stat</th>${perMonth.map(p=>`<th class="num">${b2bMonthLabel(p.key)}</th>`).join("")}<th class="num col-total">Year</th></tr></thead>
+          <tbody>
+            ${cols.map(c=>`
+              <tr>
+                <td><b>${c.label}</b></td>
+                ${perMonth.map(p=>cell(c,p.m,p.hasData)).join("")}
+                ${cell(c, yearMetrics, yearEntries.length>0, true)}
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function lineChart(values, color){
+  const present = values.filter(v=>v!==null && v!==undefined);
+  if(!present.length) return `<div class="empty-state" style="padding:20px 0">${icon("info")}<p>No weight logged yet for this range.</p></div>`;
+  const w=560,h=140,pad=8;
+  const max = Math.max(...present), min = Math.min(...present);
+  const range = (max-min)||1;
+  const n = values.length;
+  const pts = [];
+  values.forEach((v,i)=>{
+    if(v===null||v===undefined) return;
+    const x = (i/(n-1))*(w-pad*2)+pad;
+    const y = h-pad-((v-min)/range)*(h-pad*2);
+    pts.push([x,y]);
+  });
+  const path = pts.map((p,i)=>(i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+  const area = path + ` L${pts[pts.length-1][0].toFixed(1)},${h} L${pts[0][0].toFixed(1)},${h} Z`;
+  const last = pts[pts.length-1];
+  const gridLines = [0.25,0.5,0.75].map(f=>`<line x1="0" y1="${(h*f).toFixed(1)}" x2="${w}" y2="${(h*f).toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,4"/>`).join("");
+  return `<div class="chart-wrap"><svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">
+    ${gridLines}
+    <path d="${area}" fill="${color}" opacity="0.12" stroke="none"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3.5" fill="${color}"/>
+  </svg></div>`;
+}
+
+/* ============================= MODALS ============================= */
+function openModal(html){
+  const wrap = document.createElement("div");
+  wrap.className = "overlay";
+  wrap.id = "modalOverlay";
+  wrap.innerHTML = `<div class="modal">${html}</div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener("click", e=>{ if(e.target===wrap) closeModal(); });
+  document.addEventListener("keydown", escClose);
+}
+function escClose(e){ if(e.key==="Escape") closeModal(); }
+function closeModal(){
+  const el = document.getElementById("modalOverlay");
+  if(el) el.remove();
+  document.removeEventListener("keydown", escClose);
+}
+
+function b2bEntryModal(id){
+  const row = id ? state.b2bLog.find(r=>r.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${row?"Edit":"Log"} LinkedIn Acquisition day</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field field-span2"><label>Date</label><input type="date" id="f_date" value="${row?row.date:todayStr()}" /></div>
+        ${B2B_METRICS.map(m=>`<div class="field"><label>${m.label}${m.money?" (£)":""}</label><input type="number" min="0" id="f_${m.key}" value="${row&&row[m.key]?row[m.key]:0}" /></div>`).join("")}
+        <div class="field field-span2"><label>Notes (optional)</label><textarea id="f_notes">${row?row.notes||"":""}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${row?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save entry</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(row) document.getElementById("modalDelete").onclick = ()=>{ state.b2bLog = state.b2bLog.filter(r=>r.id!==id); save(); closeModal(); renderView(); toast("Entry deleted"); };
+  document.getElementById("modalSave").onclick = ()=>{
+    const entry = { id: row?row.id:uid(), date: document.getElementById("f_date").value || todayStr(), notes: document.getElementById("f_notes").value, fromSheet:false };
+    B2B_METRICS.forEach(m=>{ entry[m.key] = +document.getElementById("f_"+m.key).value || 0; });
+    if(row){ state.b2bLog = state.b2bLog.map(r=>r.id===id?entry:r); }
+    else{ state.b2bLog.push(entry); }
+    uiState.b2bTab = b2bMonthKey(entry.date);
+    save(); closeModal(); renderView(); toast("Saved"); updateNavBadges();
+  };
+}
+
+function adsEntryModal(id){
+  const row = id ? state.adsLog.find(r=>r.id===id) : null;
+  if(!state.clients.length){ toast("Add a client first"); openClientModal(); return; }
+  openModal(`
+    <div class="modal-head"><h3>${row?"Edit":"Log"} client ad day</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Client</label>
+          <select id="f_clientId">${state.clients.map(c=>`<option value="${c.id}" ${row&&row.clientId===c.id||(!row&&uiState.adsClient===c.id)?"selected":""}>${c.company}</option>`).join("")}</select>
+        </div>
+        <div class="field"><label>Date</label><input type="date" id="f_date" value="${row?row.date:todayStr()}" /></div>
+        <div class="field"><label>Bookings</label><input type="number" min="0" id="f_bookings" value="${row?row.bookings:0}" /></div>
+        <div class="field"><label>Cancellations</label><input type="number" min="0" id="f_cancellations" value="${row?row.cancellations:0}" /></div>
+        <div class="field"><label>Reschedules</label><input type="number" min="0" id="f_reschedules" value="${row?row.reschedules:0}" /></div>
+        <div class="field"><label>No-shows</label><input type="number" min="0" id="f_noShows" value="${row?row.noShows:0}" /></div>
+        <div class="field"><label>Live calls (shows)</label><input type="number" min="0" id="f_liveCalls" value="${row?row.liveCalls:0}" /></div>
+        <div class="field"><label>Offers made</label><input type="number" min="0" id="f_offersMade" value="${row?row.offersMade:0}" /></div>
+        <div class="field"><label>Closed deals</label><input type="number" min="0" id="f_closedDeals" value="${row?row.closedDeals:0}" /></div>
+        <div class="field"><label>Cash collected (£)</label><input type="number" min="0" id="f_cashCollected" value="${row?row.cashCollected:0}" /></div>
+        <div class="field"><label>Follow ups (open, current)</label><input type="number" min="0" id="f_followUps" value="${row?row.followUps:0}" /></div>
+        <div class="field"><label>Not closed yet (current)</label><input type="number" min="0" id="f_notClosedYet" value="${row?row.notClosedYet:0}" /></div>
+        <div class="field field-span2"><label>Notes (optional)</label><textarea id="f_notes">${row?row.notes||"":""}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${row?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save entry</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(row) document.getElementById("modalDelete").onclick = ()=>{ state.adsLog = state.adsLog.filter(r=>r.id!==id); save(); closeModal(); renderView(); toast("Entry deleted"); };
+  document.getElementById("modalSave").onclick = ()=>{
+    const entry = {
+      id: row?row.id:uid(),
+      clientId: document.getElementById("f_clientId").value,
+      date: document.getElementById("f_date").value || todayStr(),
+      bookings: +document.getElementById("f_bookings").value||0,
+      cancellations: +document.getElementById("f_cancellations").value||0,
+      reschedules: +document.getElementById("f_reschedules").value||0,
+      noShows: +document.getElementById("f_noShows").value||0,
+      liveCalls: +document.getElementById("f_liveCalls").value||0,
+      offersMade: +document.getElementById("f_offersMade").value||0,
+      closedDeals: +document.getElementById("f_closedDeals").value||0,
+      cashCollected: +document.getElementById("f_cashCollected").value||0,
+      followUps: +document.getElementById("f_followUps").value||0,
+      notClosedYet: +document.getElementById("f_notClosedYet").value||0,
+      notes: document.getElementById("f_notes").value,
+    };
+    if(row){ state.adsLog = state.adsLog.map(r=>r.id===id?entry:r); }
+    else{ state.adsLog.push(entry); }
+    save(); closeModal(); renderView(); toast("Saved"); updateNavBadges();
+  };
+}
+
+function leadEntryModal(id){
+  const row = id ? state.leadsLog.find(r=>r.id===id) : null;
+  if(!state.clients.length){ toast("Add a client first"); openClientModal(); return; }
+  openModal(`
+    <div class="modal-head"><h3>${row?"Edit":"Add"} lead</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Client</label>
+          <select id="f_clientId">${state.clients.map(c=>`<option value="${c.id}" ${row&&row.clientId===c.id||(!row&&uiState.adsClient===c.id)?"selected":""}>${c.company}</option>`).join("")}</select>
+        </div>
+        <div class="field"><label>Date</label><input type="date" id="f_date" value="${row?row.date:todayStr()}" /></div>
+        <div class="field field-span2"><label>Lead name</label><input id="f_leadName" placeholder="e.g. John Kelly, or Company Name" value="${row?row.leadName:""}" /></div>
+        <div class="field"><label>Outcome</label>
+          <select id="f_outcome">${OUTCOMES.map(o=>`<option ${row&&row.outcome===o?"selected":""}>${o}</option>`).join("")}</select>
+        </div>
+        <div class="field"><label>Offer made?</label>
+          <select id="f_offerMade">
+            <option value="false" ${row&&!row.offerMade?"selected":""}>No</option>
+            <option value="true" ${row&&row.offerMade?"selected":""}>Yes</option>
+          </select>
+        </div>
+        <div class="field field-span2"><label>Cash collected (£, if any)</label><input type="number" min="0" id="f_cash" value="${row&&row.cash?row.cash:""}" /></div>
+        <div class="field field-span2"><label>Notes</label><textarea id="f_notes">${row?row.notes||"":""}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${row?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save lead</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(row) document.getElementById("modalDelete").onclick = ()=>{ state.leadsLog = state.leadsLog.filter(r=>r.id!==id); save(); closeModal(); renderView(); toast("Lead deleted"); };
+  document.getElementById("modalSave").onclick = ()=>{
+    const leadName = document.getElementById("f_leadName").value.trim();
+    if(!leadName){ toast("Lead name required"); return; }
+    const entry = {
+      id: row?row.id:uid(),
+      clientId: document.getElementById("f_clientId").value,
+      date: document.getElementById("f_date").value || todayStr(),
+      leadName,
+      outcome: document.getElementById("f_outcome").value,
+      offerMade: document.getElementById("f_offerMade").value==="true",
+      cash: +document.getElementById("f_cash").value||0,
+      notes: document.getElementById("f_notes").value,
+    };
+    if(row){ state.leadsLog = state.leadsLog.map(r=>r.id===id?entry:r); }
+    else{ state.leadsLog.push(entry); }
+    save(); closeModal(); renderView(); toast("Saved"); updateNavBadges();
+  };
+}
+
+function openClientModal(id){
+  const row = id ? state.clients.find(c=>c.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${row?"Edit":"New"} client</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field field-span2"><label>Company</label><input id="f_company" value="${row?row.company:""}" /></div>
+        <div class="field"><label>Contact name</label><input id="f_contact" value="${row?row.contact||"":""}" /></div>
+        <div class="field"><label>Status</label>
+          <select id="f_status">${["active","paused","churned"].map(s=>`<option ${row&&row.status===s?"selected":""}>${s}</option>`).join("")}</select>
+        </div>
+        <div class="field"><label>Model</label>
+          <select id="f_model">${["Pay per appointment","Retainer","Hybrid","Other"].map(s=>`<option ${row&&row.model===s?"selected":""}>${s}</option>`).join("")}</select>
+        </div>
+        <div class="field"><label>Monthly run-rate (£)</label><input type="number" min="0" id="f_runRate" value="${row?row.runRate:0}" /></div>
+        <div class="field"><label>Start date</label><input type="date" id="f_startDate" value="${row?row.startDate||"":todayStr()}" /></div>
+        <div class="field field-span2"><label>Meta Ads account ID <span class="cell-muted">(for future live sync)</span></label><input id="f_adAccountId" placeholder="act_xxxxxxxxxx" value="${row?row.adAccountId||"":""}" /></div>
+        <div class="field field-span2"><label>Notes</label><textarea id="f_notes">${row?row.notes||"":""}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${row?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save client</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(row) document.getElementById("modalDelete").onclick = ()=>{
+    state.clients = state.clients.filter(c=>c.id!==id);
+    state.adsLog = state.adsLog.filter(l=>l.clientId!==id);
+    save(); closeModal(); renderView(); toast("Client deleted");
+  };
+  document.getElementById("modalSave").onclick = ()=>{
+    const company = document.getElementById("f_company").value.trim();
+    if(!company){ toast("Company name required"); return; }
+    const entry = {
+      id: row?row.id:uid(),
+      company,
+      contact: document.getElementById("f_contact").value,
+      status: document.getElementById("f_status").value,
+      model: document.getElementById("f_model").value,
+      runRate: +document.getElementById("f_runRate").value||0,
+      startDate: document.getElementById("f_startDate").value,
+      adAccountId: document.getElementById("f_adAccountId").value.trim(),
+      notes: document.getElementById("f_notes").value,
+    };
+    if(row){ state.clients = state.clients.map(c=>c.id===id?entry:c); }
+    else{ state.clients.push(entry); }
+    save(); closeModal(); renderView(); toast("Saved"); updateNavBadges();
+  };
+}
+
+function fitEntryModal(id){
+  const row = id ? state.fitnessLog.find(r=>r.id===id) : null;
+  openModal(`
+    <div class="modal-head"><h3>${row?"Edit":"Log"} fitness day</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field"><label>Date</label><input type="date" id="f_date" value="${row?row.date:todayStr()}" /></div>
+        <div class="field"><label>Weight (${state.settings.weightUnit})</label><input type="number" step="0.1" min="0" id="f_weight" value="${row&&row.weight?row.weight:""}" /></div>
+        <div class="field"><label>Calories</label><input type="number" min="0" id="f_calories" value="${row&&row.calories?row.calories:""}" /></div>
+        <div class="field field-span2"><label>Protein (g)</label><input type="number" min="0" id="f_protein" value="${row&&row.protein?row.protein:""}" /></div>
+        <div class="field field-span2"><label>What you ate</label><textarea id="f_foods" placeholder="e.g. eggs & toast, chicken salad, protein shake, steak & rice">${row?row.foods||"":""}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${row?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save entry</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(row) document.getElementById("modalDelete").onclick = ()=>{ state.fitnessLog = state.fitnessLog.filter(r=>r.id!==id); save(); closeModal(); renderView(); toast("Entry deleted"); };
+  document.getElementById("modalSave").onclick = ()=>{
+    const date = document.getElementById("f_date").value || todayStr();
+    const existingSame = state.fitnessLog.find(r=>r.date===date && (!row || r.id!==row.id));
+    const entry = {
+      id: row?row.id:(existingSame?existingSame.id:uid()),
+      date,
+      weight: +document.getElementById("f_weight").value||0,
+      calories: +document.getElementById("f_calories").value||0,
+      protein: +document.getElementById("f_protein").value||0,
+      foods: document.getElementById("f_foods").value,
+      fromSheet: false,
+    };
+    if(row){ state.fitnessLog = state.fitnessLog.map(r=>r.id===id?entry:r); }
+    else if(existingSame){ state.fitnessLog = state.fitnessLog.map(r=>r.id===existingSame.id?entry:r); }
+    else{ state.fitnessLog.push(entry); }
+    uiState.fitTab = fitMonthKey(date);
+    save(); closeModal(); renderView(); toast("Saved"); updateNavBadges();
+  };
+}
+
+function targetsModal(group){
+  const t = state.settings.targets;
+  const fields = [
+    ["showRate","Show rate ≥ (%)"],
+    ["cancellationRate","Cancellation rate ≤ (%)"],
+    ["closeRate","Close rate ≥ (%)"],
+    ["offerCloseRate","Offer → close rate ≥ (%)"],
+  ];
+  openModal(`
+    <div class="modal-head"><h3>KPI targets</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        ${fields.map(([k,label])=>`<div class="field"><label>${label}</label><input type="number" min="0" step="0.1" id="tf_${k}" value="${t[k]}"/></div>`).join("")}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save targets</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  document.getElementById("modalSave").onclick = ()=>{
+    fields.forEach(([k])=>{ state.settings.targets[k] = +document.getElementById("tf_"+k).value || 0; });
+    save(); closeModal(); renderView(); toast("Targets updated");
+  };
+}
+
+/* ============================= EVENTS ============================= */
+function bindViewEvents(){
+  document.querySelectorAll("[data-jump]").forEach(el=>{
+    el.addEventListener("click", ()=>{ activeView = el.dataset.jump; renderShell(); });
+  });
+  document.querySelectorAll("[data-open]").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      const kind = el.dataset.open;
+      if(kind==="b2bEntry") b2bEntryModal();
+      else if(kind==="adsEntry") adsEntryModal();
+      else if(kind==="leadEntry") leadEntryModal();
+      else if(kind==="aaLead") aaLeadModal();
+      else if(kind==="clientEntry") openClientModal();
+      else if(kind==="fitEntry") fitEntryModal();
+      else if(kind==="targets") targetsModal(el.dataset.targetGroup);
+    });
+  });
+  document.querySelectorAll("[data-edit-b2b]").forEach(el=>el.addEventListener("click", ()=>b2bEntryModal(el.dataset.editB2b)));
+  document.querySelectorAll("[data-del-b2b]").forEach(el=>el.addEventListener("click", ()=>{
+    if(confirm("Delete this entry?")){ state.b2bLog = state.b2bLog.filter(r=>r.id!==el.dataset.delB2b); save(); renderView(); toast("Deleted"); }
+  }));
+  document.querySelectorAll("[data-edit-ads]").forEach(el=>el.addEventListener("click", ()=>adsEntryModal(el.dataset.editAds)));
+  document.querySelectorAll("[data-del-ads]").forEach(el=>el.addEventListener("click", ()=>{
+    if(confirm("Delete this entry?")){ state.adsLog = state.adsLog.filter(r=>r.id!==el.dataset.delAds); save(); renderView(); toast("Deleted"); }
+  }));
+  document.querySelectorAll("[data-edit-lead]").forEach(el=>el.addEventListener("click", ()=>leadEntryModal(el.dataset.editLead)));
+  document.querySelectorAll("[data-del-lead]").forEach(el=>el.addEventListener("click", ()=>{
+    if(confirm("Delete this lead?")){ state.leadsLog = state.leadsLog.filter(r=>r.id!==el.dataset.delLead); save(); renderView(); toast("Deleted"); }
+  }));
+  document.querySelectorAll("[data-edit-client]").forEach(el=>el.addEventListener("click", ()=>openClientModal(el.dataset.editClient)));
+  document.querySelectorAll("[data-del-client]").forEach(el=>el.addEventListener("click", ()=>{
+    if(confirm("Delete this client and its ad logs?")){ state.clients = state.clients.filter(c=>c.id!==el.dataset.delClient); state.adsLog = state.adsLog.filter(l=>l.clientId!==el.dataset.delClient); save(); renderView(); toast("Deleted"); }
+  }));
+  document.querySelectorAll("[data-edit-fit]").forEach(el=>el.addEventListener("click", ()=>fitEntryModal(el.dataset.editFit)));
+  document.querySelectorAll("[data-del-fit]").forEach(el=>el.addEventListener("click", ()=>{
+    if(confirm("Delete this entry?")){ state.fitnessLog = state.fitnessLog.filter(r=>r.id!==el.dataset.delFit); save(); renderView(); toast("Deleted"); }
+  }));
+
+  document.querySelectorAll("[data-b2b-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.b2bTab=b.dataset.b2bTab; renderView(); }));
+
+  /* ---- Ads Acquisition ---- */
+  document.querySelectorAll("[data-aa-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.aaTab=b.dataset.aaTab; renderView(); }));
+  document.querySelectorAll("[data-edit-aa-lead]").forEach(el=>el.addEventListener("click", ()=>aaLeadModal(el.dataset.editAaLead)));
+  document.querySelectorAll("[data-del-aa-lead]").forEach(el=>el.addEventListener("click", ()=>{
+    if(confirm("Delete this lead?")){ state.adsAcqLeads = state.adsAcqLeads.filter(l=>l.id!==el.dataset.delAaLead); save(); renderView(); toast("Deleted"); }
+  }));
+  document.querySelectorAll("[data-aa-filter]").forEach(el=>{
+    const evt = el.tagName==="SELECT" ? "change" : "input";
+    el.addEventListener(evt, ()=>{ uiState.aaFilters[el.dataset.aaFilter] = el.value; renderView();
+      if(el.tagName!=="SELECT"){ setTimeout(()=>{ const i=document.querySelector(`[data-aa-filter="${el.dataset.aaFilter}"]`); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length);} },0); }
+    });
+  });
+  const aaSortDirBtn = document.querySelector("[data-aa-sort-dir]");
+  if(aaSortDirBtn) aaSortDirBtn.addEventListener("click", ()=>{ uiState.aaFilters.sortDir = uiState.aaFilters.sortDir==="asc"?"desc":"asc"; renderView(); });
+  document.querySelectorAll("[data-aa-monthly-input]").forEach(el=>el.addEventListener("change", ()=>{
+    const [mk,field] = el.dataset.aaMonthlyInput.split("|");
+    aaSetMonthlyInput(mk, { [field]: +el.value||0 });
+    renderView();
+  }));
+  const adsSeg = document.getElementById("adsPeriodSeg");
+  if(adsSeg) adsSeg.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>{ uiState.adsPeriod=b.dataset.period; renderView(); }));
+  document.querySelectorAll("[data-fit-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.fitTab=b.dataset.fitTab; renderView(); }));
+  const adsClientSel = document.getElementById("adsClientSelect");
+  if(adsClientSel) adsClientSel.addEventListener("change", e=>{ uiState.adsClient=e.target.value; renderView(); });
+  const clientFilterSel = document.getElementById("clientFilterSel");
+  if(clientFilterSel) clientFilterSel.addEventListener("change", e=>{ uiState.clientFilter=e.target.value; renderView(); });
+  const clientSearchInput = document.getElementById("clientSearchInput");
+  if(clientSearchInput) clientSearchInput.addEventListener("input", e=>{ uiState.clientSearch=e.target.value; renderView(); setTimeout(()=>{ const i=document.getElementById("clientSearchInput"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length);} },0); });
+
+  /* ---- Daily workflow ---- */
+  document.querySelectorAll("[data-wf-check]").forEach(el=>el.addEventListener("change", ()=>{
+    wfToggleCheck(el.dataset.wfCheck, el.checked); renderView();
+  }));
+  document.querySelectorAll("[data-wf-leadcall]").forEach(el=>el.addEventListener("change", ()=>{
+    const [section,clientId] = el.dataset.wfLeadcall.split("|");
+    wfToggleLeadCall(section, clientId, el.checked); renderView();
+  }));
+  function wfAddNote(section,type){
+    const input = document.querySelector(`[data-wf-note-input="${section}|${type}"]`);
+    const text = input.value.trim();
+    if(!text) return;
+    const list = wfNotes(section,type);
+    list.push({ text, done:false });
+    wfSetNotes(section,type,list);
+    renderView();
+  }
+  document.querySelectorAll("[data-wf-note-add]").forEach(el=>el.addEventListener("click", ()=>{
+    const [section,type] = el.dataset.wfNoteAdd.split("|");
+    wfAddNote(section,type);
+  }));
+  document.querySelectorAll("[data-wf-note-input]").forEach(el=>el.addEventListener("keydown", e=>{
+    if(e.key==="Enter"){ const [section,type]=el.dataset.wfNoteInput.split("|"); wfAddNote(section,type); }
+  }));
+  document.querySelectorAll("[data-wf-note-toggle]").forEach(el=>el.addEventListener("change", ()=>{
+    const [section,type,idx] = el.dataset.wfNoteToggle.split("|");
+    const list = wfNotes(section,type);
+    if(list[idx]){ list[idx].done = el.checked; wfSetNotes(section,type,list); renderView(); }
+  }));
+  document.querySelectorAll("[data-wf-note-del]").forEach(el=>el.addEventListener("click", ()=>{
+    const [section,type,idx] = el.dataset.wfNoteDel.split("|");
+    const list = wfNotes(section,type);
+    list.splice(+idx,1); wfSetNotes(section,type,list); renderView();
+  }));
+  document.querySelectorAll("[data-wf-report]").forEach(el=>el.addEventListener("input", ()=>{
+    const patch = {}; patch[el.dataset.wfReport] = el.value;
+    wfSetReport(patch);
+  }));
+  const wfGenBtn = document.querySelector("[data-wf-generate-report]");
+  if(wfGenBtn) wfGenBtn.addEventListener("click", ()=>{
+    const rep = wfReport();
+    const lines = [
+      rep.coldCalls>0?`Made ${rep.coldCalls} cold call${rep.coldCalls!=1?"s":""}.`:"",
+      rep.oldLeads>0?`Called ${rep.oldLeads} old lead${rep.oldLeads!=1?"s":""}.`:"",
+      rep.meetings>0?`Booked ${rep.meetings} meeting${rep.meetings!=1?"s":""}.`:"",
+      wfDmsForDate(todayStr())>0?`Sent ${wfDmsForDate(todayStr())} LinkedIn DM${wfDmsForDate(todayStr())!=1?"s":""}.`:"",
+      rep.revenue>0?`Generated ${fmtMoney(rep.revenue)} in revenue.`:"",
+    ].filter(Boolean);
+    const summary = `Daily Report — ${fmtDateLong(todayStr())}\n\n${lines.length?lines.join(" "):"No activity logged today."}${rep.notes?"\n\nNotes: "+rep.notes:""}`;
+    const out = document.getElementById("wfReportOutput");
+    out.innerHTML = `<div class="panel" style="margin-top:12px;background:var(--surface-2)"><div style="white-space:pre-wrap;font-size:12.5px;line-height:1.7">${summary.replace(/</g,"&lt;")}</div><button class="btn ghost sm" style="margin-top:10px" id="wfCopyReport">${icon("check")} Copy report</button></div>`;
+    document.getElementById("wfCopyReport").addEventListener("click", ()=>{
+      navigator.clipboard.writeText(summary).then(()=>toast("Copied"));
+    });
+  });
+  const wfResetBtn = document.querySelector("[data-wf-reset-day]");
+  if(wfResetBtn) wfResetBtn.addEventListener("click", ()=>{
+    if(!confirm("Reset today's workflow checklist, notes and report?")) return;
+    const d = todayStr();
+    Object.keys(state.workflow.checks).forEach(k=>{ if(k.startsWith(d+"|")) delete state.workflow.checks[k]; });
+    Object.keys(state.workflow.notes).forEach(k=>{ if(k.startsWith(d+"|")) delete state.workflow.notes[k]; });
+    Object.keys(state.workflow.leadCalls).forEach(k=>{ if(k.startsWith(d+"|")) delete state.workflow.leadCalls[k]; });
+    delete state.workflow.reports[d];
+    save(); renderView(); toast("Today's workflow reset");
+  });
+}
+
+function exportAllJSON(){
+  const data = JSON.stringify(state, null, 2);
+  if(window.claude && window.claude.downloads){
+    window.claude.downloads.save({ filename: "reach-eyeballs-cockpit-backup.json", data }).catch(()=>{
+      fallbackDownload(data);
+    });
+  } else {
+    fallbackDownload(data);
+  }
+}
+function fallbackDownload(data){
+  const blob = new Blob([data], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "reach-eyeballs-cockpit-backup.json";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ============================= INIT ============================= */
+mergeSheetImport();
+mergeB2BSheetImport();
+renderShell();
+})();
+</script>
