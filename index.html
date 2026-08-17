@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <meta charset="utf-8" />
 <title>Reach Eyeballs Cockpit</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -327,11 +330,19 @@
   }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
-</style>
 
+  .login-screen{ width:100%; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); }
+  .login-card{ width:320px; max-width:90vw; text-align:center; }
+  .login-card h2{ margin:0 0 2px; font-size:19px; }
+  .login-card .field{ text-align:left; }
+  .login-error{ color:var(--bad); font-size:12.5px; margin-top:8px; min-height:16px; }
+</style>
+</head>
+<body>
 <div class="app" id="app"></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 (function(){
 "use strict";
@@ -363,8 +374,13 @@ const ICONS = {
 };
 function icon(name){ return ICONS[name] || ""; }
 
+/* ============================= SUPABASE ============================= */
+const SUPABASE_URL = "https://vcpaadscuyfxkruqjxwt.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_88PY1OLTXF1oP8DlUf80HA_uEf3lrV2";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUserEmail = "";
+
 /* ============================= STORAGE ============================= */
-const STORE_KEY = "reach_eyeballs_cockpit_v1";
 const OUTCOMES = ["Main offer closed","Special Payment","Deposit","Follow up","Rescheduled","No-Show","Cancelled","Offer & Didn't Buy","Bad Fit / No Offer"];
 const FOLLOW_UP_OUTCOMES = ["Follow up","Rescheduled","No-Show","Cancelled"];
 const CLOSED_OUTCOMES = ["Main offer closed","Special Payment","Deposit"];
@@ -387,21 +403,139 @@ function defaultState(){
     }
   };
 }
-let state = load();
-function load(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(!raw) return defaultState();
-    const parsed = JSON.parse(raw);
-    return Object.assign(defaultState(), parsed, {
-      settings: Object.assign(defaultState().settings, parsed.settings || {}, {
-        targets: Object.assign(defaultState().settings.targets, (parsed.settings||{}).targets || {})
-      })
-    });
-  }catch(e){ return defaultState(); }
+let state = defaultState();
+function uid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
 }
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-function uid(){ return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
+
+/* ---- generic camelCase state <-> snake_case row mapping ---- */
+function toRow(obj, fields){ const o={}; fields.forEach(([c,s])=>{ o[s]= obj[c]===undefined?null:obj[c]; }); return o; }
+function fromRow(row, fields){ const o={}; fields.forEach(([c,s])=>{ o[c]=row[s]; }); return o; }
+
+const F_CLIENTS = [["id","id"],["company","company"],["contact","contact"],["status","status"],["model","model"],["runRate","run_rate"],["startDate","start_date"],["adAccountId","ad_account_id"],["notes","notes"]];
+const F_B2B = [["id","id"],["date","date"],["openerMS","opener_ms"],["proposalMS","proposal_ms"],["fupsToday","fups_today"],["docAccepts","doc_accepts"],["connectionsSent","connections_sent"],["callsProposed","calls_proposed"],["calendarLinksSent","calendar_links_sent"],["callsBooked","calls_booked"],["sales","sales"],["cashCollected","cash_collected"],["notes","notes"],["fromSheet","from_sheet"]];
+const F_ADS = [["id","id"],["clientId","client_id"],["date","date"],["bookings","bookings"],["cancellations","cancellations"],["reschedules","reschedules"],["noShows","no_shows"],["liveCalls","live_calls"],["offersMade","offers_made"],["closedDeals","closed_deals"],["cashCollected","cash_collected"],["followUps","follow_ups"],["notClosedYet","not_closed_yet"],["notes","notes"]];
+const F_LEADS = [["id","id"],["clientId","client_id"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["offerMade","offer_made"],["cash","cash"],["notes","notes"]];
+const F_AALEADS = [["id","id"],["closerName","closer_name"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["secondCallOutcome","second_call_outcome"],["offerClosedPitched","offer_closed_pitched"],["offerMade","offer_made"],["cash","cash"],["recordingLink","recording_link"]];
+const F_FITNESS = [["id","id"],["date","date"],["weight","weight"],["calories","calories"],["protein","protein"],["foods","foods"],["fromSheet","from_sheet"]];
+const F_AAMONTHLY = [["adSpend","ad_spend"],["lpViews","lp_views"],["paidTrials","paid_trials"],["fullPackage","full_package"],["revenue","revenue"]];
+
+async function loadArrayTable(table, fields){
+  const { data, error } = await sb.from(table).select("*");
+  if(error){ console.error("load failed:", table, error); return []; }
+  return (data||[]).map(r=>fromRow(r, fields));
+}
+async function syncArrayTable(table, rows, fields){
+  try{
+    const { data: existing } = await sb.from(table).select("id");
+    const keepIds = new Set(rows.map(r=>r.id));
+    const toDelete = (existing||[]).map(r=>r.id).filter(id=>!keepIds.has(id));
+    if(toDelete.length) await sb.from(table).delete().in("id", toDelete);
+    if(rows.length) await sb.from(table).upsert(rows.map(r=>toRow(r, fields)), { onConflict:"id" });
+  }catch(e){ console.error("sync failed:", table, e); }
+}
+async function loadMonthlyTable(){
+  const { data, error } = await sb.from("ads_acq_monthly").select("*");
+  if(error){ console.error("load failed: ads_acq_monthly", error); return {}; }
+  const out = {};
+  (data||[]).forEach(r=>{ out[r.month_key] = fromRow(r, F_AAMONTHLY); });
+  return out;
+}
+async function syncMonthlyTable(dict){
+  try{
+    const keys = Object.keys(dict);
+    const { data: existing } = await sb.from("ads_acq_monthly").select("month_key");
+    const keep = new Set(keys);
+    const toDelete = (existing||[]).map(r=>r.month_key).filter(k=>!keep.has(k));
+    if(toDelete.length) await sb.from("ads_acq_monthly").delete().in("month_key", toDelete);
+    if(keys.length) await sb.from("ads_acq_monthly").upsert(keys.map(k=>Object.assign({month_key:k}, toRow(dict[k], F_AAMONTHLY))), { onConflict:"month_key" });
+  }catch(e){ console.error("sync failed: ads_acq_monthly", e); }
+}
+async function loadWorkflow(){
+  const [checksRes, notesRes, reportsRes, leadCallsRes] = await Promise.all([
+    sb.from("workflow_checks").select("*"),
+    sb.from("workflow_notes").select("*").order("sort_order"),
+    sb.from("workflow_reports").select("*"),
+    sb.from("workflow_lead_calls").select("*"),
+  ]);
+  const checks = {}; (checksRes.data||[]).forEach(r=>{ checks[r.date+"|"+r.check_id]=r.checked; });
+  const notes = {}; (notesRes.data||[]).forEach(r=>{ const k=r.date+"|"+r.section+"|"+r.type; (notes[k]=notes[k]||[]).push({ text:r.text, done:r.done }); });
+  const reports = {}; (reportsRes.data||[]).forEach(r=>{ reports[r.date] = { coldCalls:r.cold_calls, oldLeads:r.old_leads, meetings:r.meetings, revenue:r.revenue, notes:r.notes }; });
+  const leadCalls = {}; (leadCallsRes.data||[]).forEach(r=>{ leadCalls[r.date+"|"+r.section+"|"+r.client_id]=r.done; });
+  return { checks, notes, reports, leadCalls };
+}
+async function syncWorkflow(workflow){
+  try{
+    const checkRows = Object.entries(workflow.checks).map(([k,v])=>{ const [date,check_id]=k.split("|"); return { date, check_id, checked:!!v }; });
+    const noteRows = [];
+    Object.entries(workflow.notes).forEach(([k,list])=>{
+      const [date,section,type] = k.split("|");
+      (list||[]).forEach((n,i)=> noteRows.push({ date, section, type, text:n.text, done:!!n.done, sort_order:i }));
+    });
+    const reportRows = Object.entries(workflow.reports).map(([date,r])=>({ date, cold_calls:r.coldCalls||0, old_leads:r.oldLeads||0, meetings:r.meetings||0, revenue:r.revenue||0, notes:r.notes||"" }));
+    const leadCallRows = Object.entries(workflow.leadCalls).map(([k,v])=>{ const [date,section,client_id]=k.split("|"); return { date, section, client_id, done:!!v }; });
+    await Promise.all([
+      sb.from("workflow_checks").delete().neq("check_id",""),
+      sb.from("workflow_notes").delete().neq("id","00000000-0000-0000-0000-000000000000"),
+      sb.from("workflow_reports").delete().neq("date","1900-01-01"),
+      sb.from("workflow_lead_calls").delete().neq("section",""),
+    ]);
+    await Promise.all([
+      checkRows.length ? sb.from("workflow_checks").insert(checkRows) : null,
+      noteRows.length ? sb.from("workflow_notes").insert(noteRows) : null,
+      reportRows.length ? sb.from("workflow_reports").insert(reportRows) : null,
+      leadCallRows.length ? sb.from("workflow_lead_calls").insert(leadCallRows) : null,
+    ]);
+  }catch(e){ console.error("sync failed: workflow", e); }
+}
+async function loadSettings(){
+  const { data } = await sb.from("settings").select("*").eq("id", true).maybeSingle();
+  if(!data) return defaultState().settings;
+  return { weightUnit:data.weight_unit, targets:{ showRate:data.target_show_rate, cancellationRate:data.target_cancellation_rate, closeRate:data.target_close_rate, offerCloseRate:data.target_offer_close_rate } };
+}
+async function syncSettings(settings){
+  try{
+    await sb.from("settings").update({
+      weight_unit: settings.weightUnit,
+      target_show_rate: settings.targets.showRate,
+      target_cancellation_rate: settings.targets.cancellationRate,
+      target_close_rate: settings.targets.closeRate,
+      target_offer_close_rate: settings.targets.offerCloseRate,
+    }).eq("id", true);
+  }catch(e){ console.error("sync failed: settings", e); }
+}
+async function loadState(){
+  const [clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, adsAcqMonthly, workflow, settings] = await Promise.all([
+    loadArrayTable("clients", F_CLIENTS),
+    loadArrayTable("b2b_log", F_B2B),
+    loadArrayTable("ads_log", F_ADS),
+    loadArrayTable("leads_log", F_LEADS),
+    loadArrayTable("ads_acq_leads", F_AALEADS),
+    loadArrayTable("fitness_log", F_FITNESS),
+    loadMonthlyTable(),
+    loadWorkflow(),
+    loadSettings(),
+  ]);
+  return Object.assign(defaultState(), { clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, adsAcqMonthly, workflow, settings });
+}
+let saveTimer = null;
+function syncAll(){
+  syncArrayTable("clients", state.clients, F_CLIENTS);
+  syncArrayTable("b2b_log", state.b2bLog, F_B2B);
+  syncArrayTable("ads_log", state.adsLog, F_ADS);
+  syncArrayTable("leads_log", state.leadsLog, F_LEADS);
+  syncArrayTable("ads_acq_leads", state.adsAcqLeads, F_AALEADS);
+  syncArrayTable("fitness_log", state.fitnessLog, F_FITNESS);
+  syncMonthlyTable(state.adsAcqMonthly);
+  syncWorkflow(state.workflow);
+  syncSettings(state.settings);
+}
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(syncAll, 400);
+}
+window.addEventListener("beforeunload", ()=>{ clearTimeout(saveTimer); syncAll(); });
 
 /* ============================= GOOGLE SHEET IMPORT =============================
    The published dashboard can't call out to Google Sheets live (sandboxed, no
@@ -605,10 +739,10 @@ function renderShell(){
       </nav>
       <div class="sidebar-foot">
         <div class="user-row">
-          <div class="user-avatar">${(window.__userEmail||"V").slice(0,1).toUpperCase()}</div>
-          <div class="user-email">${window.__userEmail||"you@reacheyeballs.com"}</div>
+          <div class="user-avatar">${(currentUserEmail||"V").slice(0,1).toUpperCase()}</div>
+          <div class="user-email">${currentUserEmail||""}</div>
         </div>
-        <div class="storage-note">Saved to this browser only. <button id="exportAllBtn">Export backup</button></div>
+        <div class="storage-note">Synced to your account. <button id="exportAllBtn">Export backup</button> · <button id="logoutBtn">Log out</button></div>
       </div>
     </aside>
     <main class="main">
@@ -619,6 +753,7 @@ function renderShell(){
     b.addEventListener("click", ()=>{ activeView=b.dataset.nav; renderShell(); });
   });
   document.getElementById("exportAllBtn").addEventListener("click", exportAllJSON);
+  document.getElementById("logoutBtn").addEventListener("click", logout);
   renderView();
   updateNavBadges();
 }
@@ -985,7 +1120,7 @@ function viewWorkflow(){
 function wfWeeklyEmailHref(wk, weekDates){
   const subject = `Weekly Activity Summary — w/e ${fmtDateShort(weekDates[weekDates.length-1])}`;
   const body = `Weekly Summary\n\nCold calls made: ${wk.coldCalls}\nOld leads called: ${wk.oldLeads}\nMeetings booked: ${wk.meetings}\nLinkedIn DMs sent: ${wk.dms}\nRevenue generated: £${wk.revenue.toLocaleString()}`;
-  return `mailto:${encodeURIComponent(window.__userEmail||"")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `mailto:${encodeURIComponent(currentUserEmail||"")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 /* ============================= B2B (LinkedIn outreach) ============================= */
@@ -2378,7 +2513,14 @@ function bindViewEvents(){
   }));
   document.querySelectorAll("[data-edit-client]").forEach(el=>el.addEventListener("click", ()=>openClientModal(el.dataset.editClient)));
   document.querySelectorAll("[data-del-client]").forEach(el=>el.addEventListener("click", ()=>{
-    if(confirm("Delete this client and its ad logs?")){ state.clients = state.clients.filter(c=>c.id!==el.dataset.delClient); state.adsLog = state.adsLog.filter(l=>l.clientId!==el.dataset.delClient); save(); renderView(); toast("Deleted"); }
+    if(confirm("Delete this client and its ad logs?")){
+      const cid = el.dataset.delClient;
+      state.clients = state.clients.filter(c=>c.id!==cid);
+      state.adsLog = state.adsLog.filter(l=>l.clientId!==cid);
+      state.leadsLog = state.leadsLog.filter(l=>l.clientId!==cid);
+      Object.keys(state.workflow.leadCalls).forEach(k=>{ if(k.endsWith("|"+cid)) delete state.workflow.leadCalls[k]; });
+      save(); renderView(); toast("Deleted");
+    }
   }));
   document.querySelectorAll("[data-edit-fit]").forEach(el=>el.addEventListener("click", ()=>fitEntryModal(el.dataset.editFit)));
   document.querySelectorAll("[data-del-fit]").forEach(el=>el.addEventListener("click", ()=>{
@@ -2503,8 +2645,50 @@ function fallbackDownload(data){
 }
 
 /* ============================= INIT ============================= */
-mergeSheetImport();
-mergeB2BSheetImport();
-renderShell();
+function renderLogin(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="login-screen">
+      <div class="login-card">
+        <div class="brand-mark" style="margin:0 auto 14px">RE</div>
+        <h2>Reach Eyeballs Cockpit</h2>
+        <div class="sub" style="margin-bottom:18px">Sign in to continue</div>
+        <div class="field"><label>Email</label><input type="email" id="loginEmail" autocomplete="username" /></div>
+        <div class="field" style="margin-top:10px"><label>Password</label><input type="password" id="loginPassword" autocomplete="current-password" /></div>
+        <div id="loginError" class="login-error"></div>
+        <button class="btn primary" id="loginSubmit" style="width:100%;margin-top:14px;justify-content:center">Sign in</button>
+      </div>
+    </div>
+  `;
+  const submit = async ()=>{
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    const errEl = document.getElementById("loginError");
+    errEl.textContent = "";
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ errEl.textContent = error.message; return; }
+    boot();
+  };
+  document.getElementById("loginSubmit").onclick = submit;
+  document.getElementById("loginPassword").addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+}
+async function logout(){
+  await sb.auth.signOut();
+  boot();
+}
+async function boot(){
+  const app = document.getElementById("app");
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ renderLogin(); return; }
+  currentUserEmail = session.user.email;
+  app.innerHTML = `<div class="login-screen"><div class="sub">Loading…</div></div>`;
+  state = await loadState();
+  mergeSheetImport();
+  mergeB2BSheetImport();
+  renderShell();
+}
+boot();
 })();
 </script>
+</body>
+</html>
