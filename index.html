@@ -372,6 +372,7 @@ const ICONS = {
   mail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>`,
   trending:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 11 13 15 21 7M21 7h-6M21 7v6"/></svg>`,
   search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>`,
+  wallet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3"/><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/><path d="M17 13h3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-3a2 2 0 0 1 0-4z"/></svg>`,
 };
 function icon(name){ return ICONS[name] || ""; }
 
@@ -393,6 +394,7 @@ function defaultState(){
     adsLog: [],
     leadsLog: [],
     fitnessLog: [],
+    finance: { weekly:[], monthly:[], categories:{}, meta:{} },
     workflow: { checks:{}, notes:{}, reports:{}, leadCalls:{} },
     adsAcqLeads: [],
     adsAcqMonthly: {},
@@ -420,6 +422,27 @@ const F_ADS = [["id","id"],["clientId","client_id"],["date","date"],["bookings",
 const F_LEADS = [["id","id"],["clientId","client_id"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["offerMade","offer_made"],["cash","cash"],["notes","notes"]];
 const F_AALEADS = [["id","id"],["closerName","closer_name"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["secondCallOutcome","second_call_outcome"],["offerClosedPitched","offer_closed_pitched"],["offerMade","offer_made"],["cash","cash"],["recordingLink","recording_link"]];
 const F_FITNESS = [["id","id"],["date","date"],["weight","weight"],["calories","calories"],["protein","protein"],["foods","foods"],["fromSheet","from_sheet"]];
+async function loadFinance(){
+  const [periodsRes, catsRes, metaRes] = await Promise.all([
+    sb.from("finance_periods").select("*"),
+    sb.from("finance_categories").select("*"),
+    sb.from("finance_meta").select("*").eq("id", true).maybeSingle(),
+  ]);
+  const weekly = (periodsRes.data||[]).filter(r=>r.period_type==="week")
+    .map(r=>({ periodKey:r.period_key, label:r.period_label, income:Number(r.income), spending:Number(r.spending), net:Number(r.net) }))
+    .sort((a,b)=>a.periodKey<b.periodKey?-1:1);
+  const monthly = (periodsRes.data||[]).filter(r=>r.period_type==="month")
+    .map(r=>({ periodKey:r.period_key, label:r.period_label, income:Number(r.income), spending:Number(r.spending), net:Number(r.net) }))
+    .sort((a,b)=>a.periodKey<b.periodKey?-1:1);
+  const categories = {};
+  (catsRes.data||[]).forEach(r=>{
+    (categories[r.period_key] = categories[r.period_key]||[]).push({ category:r.category, amount:Number(r.amount) });
+  });
+  Object.values(categories).forEach(list=>list.sort((a,b)=>b.amount-a.amount));
+  const m = metaRes.data;
+  const meta = m ? { institution:m.institution, accountBalance:m.account_balance===null?null:Number(m.account_balance), balanceAsOf:m.balance_as_of, lastSyncedAt:m.last_synced_at } : {};
+  return { weekly, monthly, categories, meta };
+}
 const F_AAMONTHLY = [["adSpend","ad_spend"],["lpViews","lp_views"],["paidTrials","paid_trials"],["fullPackage","full_package"],["revenue","revenue"]];
 
 async function loadArrayTable(table, fields){
@@ -507,18 +530,19 @@ async function syncSettings(settings){
   }catch(e){ console.error("sync failed: settings", e); }
 }
 async function loadState(){
-  const [clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, adsAcqMonthly, workflow, settings] = await Promise.all([
+  const [clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, finance, adsAcqMonthly, workflow, settings] = await Promise.all([
     loadArrayTable("clients", F_CLIENTS),
     loadArrayTable("b2b_log", F_B2B),
     loadArrayTable("ads_log", F_ADS),
     loadArrayTable("leads_log", F_LEADS),
     loadArrayTable("ads_acq_leads", F_AALEADS),
     loadArrayTable("fitness_log", F_FITNESS),
+    loadFinance(),
     loadMonthlyTable(),
     loadWorkflow(),
     loadSettings(),
   ]);
-  return Object.assign(defaultState(), { clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, adsAcqMonthly, workflow, settings });
+  return Object.assign(defaultState(), { clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, finance, adsAcqMonthly, workflow, settings });
 }
 let saveTimer = null;
 function syncAll(){
@@ -741,6 +765,7 @@ function mergeB2BSheetImport(importRows){
 
 /* ============================= UTILS ============================= */
 function fmtMoney(n){ n = n||0; const neg = n<0; return (neg?"-£":"£")+Math.round(Math.abs(n)).toLocaleString("en-GB"); }
+function fmtEUR(n){ n = n||0; const neg = n<0; return (neg?"-€":"€")+Math.round(Math.abs(n)).toLocaleString("en-GB"); }
 function fmtNum(n){ return (n||0).toLocaleString("en-GB"); }
 function fmtPct(n, d=1){ if(n===null||n===undefined||!isFinite(n)) return "—"; return n.toFixed(d)+"%"; }
 function safeDiv(a,b){ if(!b) return null; return (a/b)*100; }
@@ -805,10 +830,11 @@ const NAV = [
   { id:"adsacq", label:"Ads Acquisition", sub:"Paid ads → leads → sales", icon:"trending", chip:"#C9701F" },
   { id:"clients", label:"Client Management", sub:"CRM & accounts", icon:"briefcase", chip:"#9D7CF2" },
   { id:"fitness", label:"Fitness", sub:"Weight, calories & food", icon:"heart", chip:"#C2679A" },
+  { id:"finances", label:"Finances", sub:"Weekly & monthly spend", icon:"wallet", chip:"#3E9E6C" },
 ];
 let activeView = "today";
 let uiState = {
-  b2bTab: todayStr().slice(0,7), adsPeriod:"7d", adsClient:"all", fitTab: todayStr().slice(0,7), clientFilter:"all", clientSearch:"",
+  b2bTab: todayStr().slice(0,7), adsPeriod:"7d", adsClient:"all", fitTab: todayStr().slice(0,7), finTab: todayStr().slice(0,7), clientFilter:"all", clientSearch:"",
   aaTab: todayStr().slice(0,7),
   aaFilters: { closer:"all", outcome:"all", offer:"all", closedPitched:"all", week:"all", search:"", sortBy:"date", sortDir:"desc" },
 };
@@ -875,6 +901,7 @@ function renderView(){
   else if(activeView==="adsacq") host.innerHTML = viewAdsAcq();
   else if(activeView==="clients") host.innerHTML = viewClients();
   else if(activeView==="fitness") host.innerHTML = viewFitness();
+  else if(activeView==="finances") host.innerHTML = viewFinances();
   bindViewEvents();
 }
 
@@ -1255,8 +1282,9 @@ function b2bMetricCell(m, val){ return `<td class="num tnum">${m.money?fmtMoney(
 function rateCard(label, value){
   return `<div class="card stat rate"><div class="label">${label}</div><div class="value-row"><span class="value tnum">${value}</span></div></div>`;
 }
-function b2bStatCard(label, value, money, green){
-  const display = typeof value==="string" ? value : (money?fmtMoney(value):fmtNum(value));
+function b2bStatCard(label, value, money, green, currency){
+  const fmt = currency==="EUR" ? fmtEUR : fmtMoney;
+  const display = typeof value==="string" ? value : (money?fmt(value):fmtNum(value));
   return `<div class="card stat hero${green?" hero-g"+green:""}"><div class="label">${label}</div><div class="value-row"><span class="value tnum">${display}</span></div></div>`;
 }
 function b2bStageRates(t){
@@ -2299,6 +2327,88 @@ function lineChart(values, color){
   </svg></div>`;
 }
 
+/* ============================= FINANCES ============================= */
+function finMonthLabel(mk){ const [y,m] = mk.split("-").map(Number); return MONTH_ABBR[m-1]+" "+y; }
+function finWeekLabel(wk){ const start=new Date(wk+"T00:00:00Z"); const end=new Date(start); end.setUTCDate(end.getUTCDate()+6); return fmtDateShort(wk)+"–"+fmtDateShort(end.toISOString().slice(0,10)); }
+function finCatBar(cat, amount, maxAmount){
+  const pct = maxAmount ? Math.max(2, Math.round(amount/maxAmount*100)) : 0;
+  return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0">
+    <div style="width:170px;flex-shrink:0;font-size:12.5px" class="cell-muted">${cat}</div>
+    <div style="flex:1;background:var(--surface-2);border-radius:6px;height:9px;overflow:hidden">
+      <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px"></div>
+    </div>
+    <div style="width:70px;flex-shrink:0;text-align:right;font-size:12.5px" class="tnum">${fmtEUR(amount)}</div>
+  </div>`;
+}
+function viewFinances(){
+  const fin = state.finance;
+  const monthKeys = Object.keys(fin.categories).sort();
+  if(!monthKeys.includes(uiState.finTab)) uiState.finTab = monthKeys[monthKeys.length-1] || todayStr().slice(0,7);
+  const activeMonth = uiState.finTab;
+  const monthCats = (fin.categories[activeMonth]||[]).filter(c=>c.category!=="Transfers and card payments");
+  const transferRow = (fin.categories[activeMonth]||[]).find(c=>c.category==="Transfers and card payments");
+  const maxCat = monthCats.length ? monthCats[0].amount : 0;
+  const curMonthTotals = fin.monthly.find(m=>m.periodKey===activeMonth);
+  const meta = fin.meta||{};
+
+  const tabsHtml = monthKeys.length ? `
+    <div class="b2b-tabbar">
+      ${monthKeys.map(mk=>`<button class="b2b-tab ${activeMonth===mk?'active':''}" data-fin-tab="${mk}">${finMonthLabel(mk)}</button>`).join("")}
+    </div>` : "";
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Finances</h1>
+        <div class="sub">${meta.lastSyncedAt ? `synced ${fmtDateLong(meta.lastSyncedAt)}` : "not synced yet"}</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="panel" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge good">${icon("check")} ${meta.institution||"bank"} connected</span>
+          <div>
+            <div style="font-size:12.5px;font-weight:600">Current balance: ${meta.accountBalance!=null?fmtEUR(meta.accountBalance):"—"}</div>
+            <div class="sub" style="margin-top:1px">as of ${meta.balanceAsOf?fmtDateLong(meta.balanceAsOf):"—"} · read-only bank connection — ask Claude to "sync my finances" to refresh</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <div class="panel-head"><div><h3>Weekly cash flow</h3><div class="sub">income vs. spending, most recent weeks</div></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Week</th><th class="num">Income</th><th class="num">Spending</th><th class="num">Net</th></tr></thead>
+            <tbody>
+              ${fin.weekly.length? fin.weekly.slice(-8).map(w=>`
+                <tr>
+                  <td>${finWeekLabel(w.periodKey)}</td>
+                  <td class="num tnum">${fmtEUR(w.income)}</td>
+                  <td class="num tnum">${fmtEUR(w.spending)}</td>
+                  <td class="num tnum" style="color:${w.net>=0?'var(--good,#2f9e58)':'var(--bad,#d8433a)'}">${w.net>=0?"+":""}${fmtEUR(w.net)}</td>
+                </tr>`).join("") : `<tr class="empty-row"><td colspan="4">No data yet.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid cols-4" style="margin-bottom:12px">
+        ${b2bStatCard("Income this month", curMonthTotals?curMonthTotals.income:0, true, 0, "EUR")}
+        ${b2bStatCard("Spending this month", curMonthTotals?curMonthTotals.spending:0, true, 0, "EUR")}
+        ${b2bStatCard("Net this month", curMonthTotals?curMonthTotals.net:0, true, 0, "EUR")}
+        ${b2bStatCard("Categories tracked", monthCats.length)}
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><h3>Where it's going</h3><div class="sub">${finMonthLabel(activeMonth)} spending by category${transferRow?` · excludes ${fmtEUR(transferRow.amount)} in "Transfers and card payments" (mostly transfers to your own other account, not real spend)`:""}</div></div></div>
+        ${monthCats.length ? monthCats.map(c=>finCatBar(c.category, c.amount, maxCat)).join("") : `<div class="sub">No spending recorded for this month.</div>`}
+      </div>
+
+      ${tabsHtml}
+    </div>
+  `;
+}
+
 /* ============================= MODALS ============================= */
 function openModal(html){
   const wrap = document.createElement("div");
@@ -2647,6 +2757,7 @@ function bindViewEvents(){
   const adsSeg = document.getElementById("adsPeriodSeg");
   if(adsSeg) adsSeg.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>{ uiState.adsPeriod=b.dataset.period; renderView(); }));
   document.querySelectorAll("[data-fit-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.fitTab=b.dataset.fitTab; renderView(); }));
+  document.querySelectorAll("[data-fin-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.finTab=b.dataset.finTab; renderView(); }));
   const adsClientSel = document.getElementById("adsClientSelect");
   if(adsClientSel) adsClientSel.addEventListener("change", e=>{ uiState.adsClient=e.target.value; renderView(); });
   const clientFilterSel = document.getElementById("clientFilterSel");

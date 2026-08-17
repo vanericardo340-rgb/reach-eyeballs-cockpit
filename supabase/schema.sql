@@ -107,6 +107,36 @@ create table fitness_log (
   created_at timestamptz not null default now()
 );
 
+-- ============================= FINANCES (bank-derived summary) =============================
+-- Not a live feed: Claude pulls the connected bank account periodically (on
+-- request) and upserts pre-aggregated weekly/monthly rows here. Raw
+-- transactions never leave the connector — only summaries land in the DB.
+create table finance_periods (
+  period_type text not null check (period_type in ('week','month')),
+  period_key text not null, -- week: 'YYYY-MM-DD' (Monday); month: 'YYYY-MM'
+  period_label text,
+  income numeric default 0,
+  spending numeric default 0,
+  net numeric default 0,
+  primary key (period_type, period_key)
+);
+
+create table finance_categories (
+  period_key text not null, -- 'YYYY-MM'
+  category text not null,
+  amount numeric default 0,
+  primary key (period_key, category)
+);
+
+create table finance_meta (
+  id boolean primary key default true check (id),
+  institution text,
+  account_balance numeric,
+  balance_as_of date,
+  last_synced_at date
+);
+insert into finance_meta (id) values (true);
+
 -- ============================= DAILY WORKFLOW =============================
 create table workflow_checks (
   date date not null,
@@ -164,6 +194,9 @@ alter table leads_log enable row level security;
 alter table ads_acq_leads enable row level security;
 alter table ads_acq_monthly enable row level security;
 alter table fitness_log enable row level security;
+alter table finance_periods enable row level security;
+alter table finance_categories enable row level security;
+alter table finance_meta enable row level security;
 alter table workflow_checks enable row level security;
 alter table workflow_notes enable row level security;
 alter table workflow_reports enable row level security;
@@ -177,6 +210,9 @@ create policy "authenticated full access" on leads_log for all using (auth.role(
 create policy "authenticated full access" on ads_acq_leads for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on ads_acq_monthly for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on fitness_log for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "authenticated full access" on finance_periods for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "authenticated full access" on finance_categories for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "authenticated full access" on finance_meta for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_checks for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_notes for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_reports for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
