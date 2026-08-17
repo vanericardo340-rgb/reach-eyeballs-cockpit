@@ -538,10 +538,105 @@ function save(){
 window.addEventListener("beforeunload", ()=>{ clearTimeout(saveTimer); syncAll(); });
 
 /* ============================= GOOGLE SHEET IMPORT =============================
-   The published dashboard can't call out to Google Sheets live (sandboxed, no
-   network access). Instead, Claude reads the sheet and bakes a snapshot in here
-   whenever you ask it to sync. Entries you edit by hand in the dashboard are
-   flagged fromSheet:false so a later sync never overwrites your manual edits. */
+   The sheets are shared as "anyone with the link can view", so the dashboard
+   fetches them live (as CSV) straight from the browser on every load — no
+   manual sync needed. The arrays below are a fallback snapshot used only if
+   the live fetch fails (offline, sheet re-privated, etc). Entries you edit by
+   hand in the dashboard are flagged fromSheet:false so a sync never overwrites
+   your manual edits. */
+function parseCSV(text){
+  const rows = []; let row = [], field = "", inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){ if(text[i+1] === '"'){ field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ',') { row.push(field); field = ""; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ""; }
+      else if(c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+function parseSheetDateDMY(s){
+  const m = (s||"").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return null;
+  return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+}
+function parseSheetNum(s){
+  s = (s||"").toString().replace(/,/g,"").trim();
+  return s===""? null : (isNaN(Number(s))? null : Number(s));
+}
+function findSheetHeader(rows, requiredCols){
+  for(let r=0;r<rows.length;r++){
+    const norm = rows[r].map(c=>c.trim().toUpperCase());
+    if(requiredCols.every(rc=>norm.includes(rc))){
+      const idx = {}; requiredCols.forEach(rc=>{ idx[rc] = norm.indexOf(rc); });
+      return { rowIdx:r, idx };
+    }
+  }
+  return null;
+}
+async function fetchSheetCSVRows(sourceUrl, requiredCols){
+  const idM = sourceUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  const gidM = sourceUrl.match(/gid=(\d+)/);
+  if(!idM) throw new Error("bad sheet url");
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${idM[1]}/export?format=csv${gidM?`&gid=${gidM[1]}`:""}`;
+  const res = await fetch(csvUrl, { cache:"no-store" });
+  if(!res.ok) throw new Error("sheet fetch failed: "+res.status);
+  const rows = parseCSV(await res.text());
+  const head = findSheetHeader(rows, requiredCols);
+  if(!head) throw new Error("header row not found");
+  return { rows, ...head };
+}
+async function fetchFitnessSheetLive(){
+  const { rows, rowIdx, idx } = await fetchSheetCSVRows(SHEET_SOURCE_URL, ["DATE","CALORIES","WEIGHT","MEALS","PROTEIN"]);
+  const out = [];
+  for(let r=rowIdx+1;r<rows.length;r++){
+    const row = rows[r];
+    const date = parseSheetDateDMY(row[idx.DATE]);
+    if(!date) continue;
+    const entry = {
+      date,
+      calories: parseSheetNum(row[idx.CALORIES]),
+      weight: parseSheetNum(row[idx.WEIGHT]),
+      protein: parseSheetNum(row[idx.PROTEIN]),
+      foods: (row[idx.MEALS]||"").trim(),
+    };
+    if(entry.calories===null && entry.weight===null && entry.protein===null && !entry.foods) continue;
+    out.push(entry);
+  }
+  return out;
+}
+async function fetchB2BSheetLive(){
+  const cols = ["DATE","OPENER MS","PROPOSAL MS","FUPS","DOC ACCEPTS","CALLS PROPOSED","CALENDAR LINKS SENT","CALLS BOOKED","SALES","CASH COLLECTED"];
+  const { rows, rowIdx, idx } = await fetchSheetCSVRows(B2B_SHEET_SOURCE_URL, cols);
+  const out = [];
+  for(let r=rowIdx+1;r<rows.length;r++){
+    const row = rows[r];
+    const date = parseSheetDateDMY(row[idx.DATE]);
+    if(!date) continue;
+    const entry = {
+      date,
+      openerMS: parseSheetNum(row[idx["OPENER MS"]]),
+      proposalMS: parseSheetNum(row[idx["PROPOSAL MS"]]),
+      fupsToday: parseSheetNum(row[idx.FUPS]),
+      docAccepts: parseSheetNum(row[idx["DOC ACCEPTS"]]),
+      callsProposed: parseSheetNum(row[idx["CALLS PROPOSED"]]),
+      calendarLinksSent: parseSheetNum(row[idx["CALENDAR LINKS SENT"]]),
+      callsBooked: parseSheetNum(row[idx["CALLS BOOKED"]]),
+      sales: parseSheetNum(row[idx.SALES]),
+      cashCollected: parseSheetNum(row[idx["CASH COLLECTED"]]),
+    };
+    if(Object.keys(entry).every(k=>k==="date"||entry[k]===null)) continue;
+    out.push(entry);
+  }
+  return out;
+}
 const SHEET_SOURCE_URL = "https://docs.google.com/spreadsheets/d/1iCwTZE_tvxvSH6dZ_HIpqBgHZfFtU7y31zy9u4R8Rbc/edit#gid=1261861603";
 const SHEET_SYNCED_AT = "2026-08-17";
 const SHEET_IMPORT = [
@@ -590,9 +685,9 @@ function followUpsDueToday(){
     return daysSince>0 && daysSince<=FOLLOW_UP_WINDOW_DAYS && daysSince%FOLLOW_UP_CADENCE_DAYS===0;
   }).sort((a,b)=>a.date<b.date?-1:1);
 }
-function mergeSheetImport(){
+function mergeSheetImport(importRows){
   let changed = false;
-  SHEET_IMPORT.forEach(row=>{
+  (importRows||SHEET_IMPORT).forEach(row=>{
     const idx = state.fitnessLog.findIndex(e=>e.date===row.date);
     if(idx>=0){
       const existing = state.fitnessLog[idx];
@@ -624,9 +719,9 @@ const B2B_SHEET_IMPORT = [
   { date:"2026-08-13", openerMS:5, proposalMS:5, fupsToday:7, docAccepts:0 },
   { date:"2026-08-14", openerMS:6, proposalMS:6, fupsToday:5, docAccepts:0 },
 ];
-function mergeB2BSheetImport(){
+function mergeB2BSheetImport(importRows){
   let changed = false;
-  B2B_SHEET_IMPORT.forEach(row=>{
+  (importRows||B2B_SHEET_IMPORT).forEach(row=>{
     const idx = state.b2bLog.findIndex(e=>e.date===row.date);
     const full = { notes:"" };
     B2B_METRICS.forEach(m=>{ full[m.key] = row[m.key]||0; });
@@ -2683,8 +2778,10 @@ async function boot(){
   currentUserEmail = session.user.email;
   app.innerHTML = `<div class="login-screen"><div class="sub">Loading…</div></div>`;
   state = await loadState();
-  mergeSheetImport();
-  mergeB2BSheetImport();
+  try{ mergeSheetImport(await fetchFitnessSheetLive()); }
+  catch(e){ console.warn("fitness sheet live sync failed, using snapshot", e); mergeSheetImport(); }
+  try{ mergeB2BSheetImport(await fetchB2BSheetLive()); }
+  catch(e){ console.warn("B2B sheet live sync failed, using snapshot", e); mergeB2BSheetImport(); }
   renderShell();
 }
 boot();
