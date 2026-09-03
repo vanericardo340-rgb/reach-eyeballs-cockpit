@@ -128,6 +128,15 @@ create table finance_log (
 -- NOTE: superseded finance_periods / finance_categories / finance_meta tables
 -- from the earlier bank-connector version can be dropped if still present.
 
+create table finance_notes (
+  id text primary key, -- "{month_key}__{section}__week{n}"
+  month_key text not null,
+  section text not null check (section in ('personal','business')),
+  week integer not null check (week between 1 and 4),
+  note text not null default '',
+  updated_at timestamptz not null default now()
+);
+
 -- ============================= DAILY WORKFLOW =============================
 create table workflow_checks (
   date date not null,
@@ -186,6 +195,7 @@ alter table ads_acq_leads enable row level security;
 alter table ads_acq_monthly enable row level security;
 alter table fitness_log enable row level security;
 alter table finance_log enable row level security;
+alter table finance_notes enable row level security;
 alter table workflow_checks enable row level security;
 alter table workflow_notes enable row level security;
 alter table workflow_reports enable row level security;
@@ -200,6 +210,7 @@ create policy "authenticated full access" on ads_acq_leads for all using (auth.r
 create policy "authenticated full access" on ads_acq_monthly for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on fitness_log for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on finance_log for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "authenticated full access" on finance_notes for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_checks for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_notes for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_reports for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');

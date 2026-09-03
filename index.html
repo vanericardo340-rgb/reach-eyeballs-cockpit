@@ -69,6 +69,9 @@
   .fin-table thead th:first-child{ border-radius:10px 0 0 10px; }
   .fin-table thead th:last-child{ border-radius:0 10px 10px 0; }
   .fin-table thead .sub{ color:rgba(255,255,255,.72); }
+  .fin-table thead .icon-btn{ color:rgba(255,255,255,.85); vertical-align:middle; }
+  .fin-table thead .icon-btn:hover{ background:rgba(255,255,255,.2); color:#fff; }
+  .fin-table thead .icon-btn svg{ width:13px; height:13px; }
   .fin-table.fin-table-totalrow tbody tr:last-child{ background:var(--accent-soft); }
   .fin-total-pill{ background:linear-gradient(90deg,var(--accent-strong),var(--accent)); color:#fff; font-weight:700; padding:6px 16px; border-radius:20px; display:inline-block; }
   .card.stat.hero.fit-hero{ flex-direction:row; align-items:center; justify-content:space-between; gap:10px; }
@@ -413,6 +416,7 @@ const ICONS = {
   card:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>`,
   tag:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.6 2.9 21 11.3a2 2 0 0 1 0 2.8l-6.9 6.9a2 2 0 0 1-2.8 0L2.9 12.6a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h6.2c.5 0 1 .2 1.4.6z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>`,
   arrowDown:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 14l6 6 6-6"/></svg>`,
+  note:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>`,
 };
 function icon(name){ return ICONS[name] || ""; }
 
@@ -435,6 +439,7 @@ function defaultState(){
     leadsLog: [],
     fitnessLog: [],
     financeLog: [],
+    financeNotes: [],
     workflow: { checks:{}, notes:{}, reports:{}, leadCalls:{} },
     adsAcqLeads: [],
     adsAcqMonthly: {},
@@ -463,6 +468,7 @@ const F_LEADS = [["id","id"],["clientId","client_id"],["date","date"],["leadName
 const F_AALEADS = [["id","id"],["closerName","closer_name"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["secondCallOutcome","second_call_outcome"],["offerClosedPitched","offer_closed_pitched"],["offerMade","offer_made"],["cash","cash"],["recordingLink","recording_link"]];
 const F_FITNESS = [["id","id"],["date","date"],["weight","weight"],["calories","calories"],["protein","protein"],["foods","foods"],["fromSheet","from_sheet"]];
 const F_FINANCE = [["id","id"],["monthKey","month_key"],["section","section"],["category","category"],["week1","week1"],["week2","week2"],["week3","week3"],["week4","week4"],["monthTotal","month_total"],["fromSheet","from_sheet"]];
+const F_FINNOTES = [["id","id"],["monthKey","month_key"],["section","section"],["week","week"],["note","note"]];
 const F_AAMONTHLY = [["adSpend","ad_spend"],["lpViews","lp_views"],["paidTrials","paid_trials"],["fullPackage","full_package"],["revenue","revenue"]];
 
 async function loadArrayTable(table, fields){
@@ -550,7 +556,7 @@ async function syncSettings(settings){
   }catch(e){ console.error("sync failed: settings", e); }
 }
 async function loadState(){
-  const [clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, financeLog, adsAcqMonthly, workflow, settings] = await Promise.all([
+  const [clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, financeLog, financeNotes, adsAcqMonthly, workflow, settings] = await Promise.all([
     loadArrayTable("clients", F_CLIENTS),
     loadArrayTable("b2b_log", F_B2B),
     loadArrayTable("ads_log", F_ADS),
@@ -558,11 +564,12 @@ async function loadState(){
     loadArrayTable("ads_acq_leads", F_AALEADS),
     loadArrayTable("fitness_log", F_FITNESS),
     loadArrayTable("finance_log", F_FINANCE),
+    loadArrayTable("finance_notes", F_FINNOTES),
     loadMonthlyTable(),
     loadWorkflow(),
     loadSettings(),
   ]);
-  return Object.assign(defaultState(), { clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, financeLog, adsAcqMonthly, workflow, settings });
+  return Object.assign(defaultState(), { clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, financeLog, financeNotes, adsAcqMonthly, workflow, settings });
 }
 let saveTimer = null;
 function syncAll(){
@@ -573,6 +580,7 @@ function syncAll(){
   syncArrayTable("ads_acq_leads", state.adsAcqLeads, F_AALEADS);
   syncArrayTable("fitness_log", state.fitnessLog, F_FITNESS);
   syncArrayTable("finance_log", state.financeLog, F_FINANCE);
+  syncArrayTable("finance_notes", state.financeNotes, F_FINNOTES);
   syncMonthlyTable(state.adsAcqMonthly);
   syncWorkflow(state.workflow);
   syncSettings(state.settings);
@@ -2556,7 +2564,14 @@ function fitStatCard(label, value, caption, iconName, gradFrom, gradTo){
     <div class="fit-hero-icon">${icon(iconName)}</div>
   </div>`;
 }
-function finCatTable(cats, mk){
+function finNoteId(mk, section, week){ return `${mk}__${section}__week${week}`; }
+function finNoteFor(mk, section, week){ return state.financeNotes.find(n=>n.id===finNoteId(mk,section,week)); }
+function finNoteBtn(mk, section, week){
+  const n = finNoteFor(mk, section, week);
+  const has = n && n.note && n.note.trim();
+  return `<button class="icon-btn" data-fin-note="${mk}|${section}|${week}" title="${has?"Edit":"Add"} notes for Week ${week}" style="${has?"background:#fff;color:var(--accent)":""}">${icon("note")}</button>`;
+}
+function finCatTable(cats, mk, section){
   const totals = ["week1","week2","week3","week4","monthTotal"].reduce((a,k)=>{ a[k]=cats.reduce((s,c)=>s+Number(c[k]||0),0); return a; },{});
   const weekLabels = finWeekRanges(mk);
   const s = finSectionStats(cats);
@@ -2579,10 +2594,10 @@ function finCatTable(cats, mk){
     <table class="fin-table fin-table-totalrow">
       <thead><tr>
         <th>Category</th>
-        <th class="num">Week 1<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[0]}</div></th>
-        <th class="num">Week 2<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[1]}</div></th>
-        <th class="num">Week 3<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[2]}</div></th>
-        <th class="num">Week 4<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[3]}</div></th>
+        <th class="num">${finNoteBtn(mk,section,1)} Week 1<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[0]}</div></th>
+        <th class="num">${finNoteBtn(mk,section,2)} Week 2<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[1]}</div></th>
+        <th class="num">${finNoteBtn(mk,section,3)} Week 3<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[2]}</div></th>
+        <th class="num">${finNoteBtn(mk,section,4)} Week 4<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[3]}</div></th>
         <th class="num">Month total</th>
         <th style="width:120px">Share</th>
       </tr></thead>
@@ -2743,7 +2758,7 @@ function renderFinMonth(mk){
           <div><h3>Personal spending</h3><div class="sub">by category, week by week</div></div>
         </div>
       </div>
-      ${personalCats.length ? finCatTable(personalCats, mk) : `<div class="sub">Nothing logged yet.</div>`}
+      ${personalCats.length ? finCatTable(personalCats, mk, "personal") : `<div class="sub">Nothing logged yet.</div>`}
     </div>
 
     <div class="panel">
@@ -2753,7 +2768,7 @@ function renderFinMonth(mk){
           <div><h3>Business spending</h3><div class="sub">by category, week by week</div></div>
         </div>
       </div>
-      ${businessCats.length ? finCatTable(businessCats, mk) : `<div class="sub">Nothing logged yet.</div>`}
+      ${businessCats.length ? finCatTable(businessCats, mk, "business") : `<div class="sub">Nothing logged yet.</div>`}
     </div>
   `;
 }
@@ -3037,6 +3052,35 @@ function targetsModal(group){
   };
 }
 
+function financeNoteModal(mk, section, week){
+  const id = finNoteId(mk, section, week);
+  const existing = finNoteFor(mk, section, week);
+  const sectionLabel = section==="personal" ? "Personal" : "Business";
+  openModal(`
+    <div class="modal-head"><h3>${sectionLabel} — Week ${week} notes</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field field-span2"><label>What happened / what you were spending on</label><textarea id="fn_note" rows="6" placeholder="e.g. birthday dinner out, laptop repair, stocked up on groceries for the month...">${existing?existing.note||"":""}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${existing?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save note</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(existing) document.getElementById("modalDelete").onclick = ()=>{ state.financeNotes = state.financeNotes.filter(n=>n.id!==id); save(); closeModal(); renderView(); toast("Note deleted"); };
+  document.getElementById("modalSave").onclick = ()=>{
+    const note = document.getElementById("fn_note").value;
+    const entry = { id, monthKey:mk, section, week, note };
+    if(existing){ state.financeNotes = state.financeNotes.map(n=>n.id===id?entry:n); }
+    else{ state.financeNotes.push(entry); }
+    save(); closeModal(); renderView(); toast("Saved");
+  };
+}
+
 /* ============================= EVENTS ============================= */
 function bindViewEvents(){
   document.querySelectorAll("[data-jump]").forEach(el=>{
@@ -3107,6 +3151,10 @@ function bindViewEvents(){
   if(adsSeg) adsSeg.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>{ uiState.adsPeriod=b.dataset.period; renderView(); }));
   document.querySelectorAll("[data-fit-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.fitTab=b.dataset.fitTab; renderView(); }));
   document.querySelectorAll("[data-fin-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.finTab=b.dataset.finTab; renderView(); }));
+  document.querySelectorAll("[data-fin-note]").forEach(b=>b.addEventListener("click", ()=>{
+    const [mk, section, week] = b.dataset.finNote.split("|");
+    financeNoteModal(mk, section, +week);
+  }));
   const adsClientSel = document.getElementById("adsClientSelect");
   if(adsClientSel) adsClientSel.addEventListener("change", e=>{ uiState.adsClient=e.target.value; renderView(); });
   const clientFilterSel = document.getElementById("clientFilterSel");
