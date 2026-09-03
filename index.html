@@ -2494,14 +2494,13 @@ function finMonthTotals(entries){
   return { weeks, income, personal, business, spending: personal+business, net: income-personal-business };
 }
 function finWeekRanges(mk){
-  const [y,m] = mk.split("-").map(Number);
-  const lastDay = new Date(y,m,0).getDate();
-  const bounds = [[1,7],[8,14],[15,21],[22,lastDay]];
-  return bounds.map(([a,b])=>{
-    const start = `${mk}-${String(a).padStart(2,"0")}`;
-    const end = `${mk}-${String(Math.min(b,lastDay)).padStart(2,"0")}`;
-    return `${a} – ${fmtDateShort(end)}`;
-  });
+  let cursor = mondayOnOrBefore(`${mk}-01`);
+  const out = [];
+  for(let i=0;i<4;i++){
+    out.push(`${fmtDateShort(cursor)} – ${fmtDateShort(addDays(cursor,6))}`);
+    cursor = addDays(cursor,7);
+  }
+  return out;
 }
 function finSectionStats(cats){
   const total = cats.reduce((a,c)=>a+c.monthTotal,0);
