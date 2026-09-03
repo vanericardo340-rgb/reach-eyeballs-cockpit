@@ -2394,14 +2394,31 @@ function finMonthTotals(entries){
   const business = weeks.reduce((a,w)=>a+w.business,0);
   return { weeks, income, personal, business, spending: personal+business, net: income-personal-business };
 }
-function finCatBar(cat, amount, maxAmount){
-  const pct = maxAmount ? Math.max(2, Math.round(amount/maxAmount*100)) : 0;
-  return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0">
-    <div style="width:220px;flex-shrink:0;font-size:12.5px" class="cell-muted">${cat}</div>
-    <div style="flex:1;background:var(--surface-2);border-radius:6px;height:9px;overflow:hidden">
-      <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px"></div>
-    </div>
-    <div style="width:70px;flex-shrink:0;text-align:right;font-size:12.5px" class="tnum">${fmtEUR(amount)}</div>
+function finCatTable(cats){
+  const totals = ["week1","week2","week3","week4","monthTotal"].reduce((a,k)=>{ a[k]=cats.reduce((s,c)=>s+Number(c[k]||0),0); return a; },{});
+  return `<div class="table-wrap">
+    <table>
+      <thead><tr><th>Category</th><th class="num">Week 1</th><th class="num">Week 2</th><th class="num">Week 3</th><th class="num">Week 4</th><th class="num">Month total</th></tr></thead>
+      <tbody>
+        ${cats.map(c=>`
+          <tr>
+            <td class="cell-muted">${c.category}</td>
+            <td class="num tnum">${fmtEUR(c.week1)}</td>
+            <td class="num tnum">${fmtEUR(c.week2)}</td>
+            <td class="num tnum">${fmtEUR(c.week3)}</td>
+            <td class="num tnum">${fmtEUR(c.week4)}</td>
+            <td class="num tnum"><b>${fmtEUR(c.monthTotal)}</b></td>
+          </tr>`).join("")}
+        <tr>
+          <td><b>Total</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week1)}</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week2)}</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week3)}</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week4)}</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.monthTotal)}</b></td>
+        </tr>
+      </tbody>
+    </table>
   </div>`;
 }
 function viewFinances(){
@@ -2465,8 +2482,6 @@ function renderFinMonth(mk){
   const hasGid = !!FINANCE_MONTH_GIDS[mk];
   const personalCats = entries.filter(e=>e.section==="personal").sort((a,b)=>b.monthTotal-a.monthTotal);
   const businessCats = entries.filter(e=>e.section==="business").sort((a,b)=>b.monthTotal-a.monthTotal);
-  const maxPersonal = personalCats.length ? personalCats[0].monthTotal : 0;
-  const maxBusiness = businessCats.length ? businessCats[0].monthTotal : 0;
 
   return `
     <div class="panel" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -2478,6 +2493,13 @@ function renderFinMonth(mk){
         </div>
       </div>
       ${hasGid?`<a class="btn ghost sm" href="https://docs.google.com/spreadsheets/d/${FINANCE_SHEET_ID}/edit#gid=${FINANCE_MONTH_GIDS[mk]}" target="_blank" rel="noopener">Open sheet</a>`:""}
+    </div>
+
+    <div class="grid cols-4" style="margin-bottom:12px">
+      ${b2bStatCard("Income this month", t.income, true, 0, "EUR")}
+      ${b2bStatCard("Personal expenses", t.personal, true, 0, "EUR")}
+      ${b2bStatCard("Business expenses", t.business, true, 0, "EUR")}
+      ${b2bStatCard("Net", t.net, true, 0, "EUR")}
     </div>
 
     <div class="panel" style="margin-bottom:12px">
@@ -2498,21 +2520,14 @@ function renderFinMonth(mk){
       </div>
     </div>
 
-    <div class="grid cols-4" style="margin-bottom:12px">
-      ${b2bStatCard("Income this month", t.income, true, 0, "EUR")}
-      ${b2bStatCard("Personal expenses", t.personal, true, 0, "EUR")}
-      ${b2bStatCard("Business expenses", t.business, true, 0, "EUR")}
-      ${b2bStatCard("Net", t.net, true, 0, "EUR")}
-    </div>
-
     <div class="panel" style="margin-bottom:12px">
-      <div class="panel-head"><div><h3>Personal spending</h3><div class="sub">by category, this month</div></div></div>
-      ${personalCats.length ? personalCats.map(c=>finCatBar(c.category, c.monthTotal, maxPersonal)).join("") : `<div class="sub">Nothing logged yet.</div>`}
+      <div class="panel-head"><div><h3>Personal spending</h3><div class="sub">by category, week by week</div></div></div>
+      ${personalCats.length ? finCatTable(personalCats) : `<div class="sub">Nothing logged yet.</div>`}
     </div>
 
     <div class="panel">
-      <div class="panel-head"><div><h3>Business spending</h3><div class="sub">by category, this month</div></div></div>
-      ${businessCats.length ? businessCats.map(c=>finCatBar(c.category, c.monthTotal, maxBusiness)).join("") : `<div class="sub">Nothing logged yet.</div>`}
+      <div class="panel-head"><div><h3>Business spending</h3><div class="sub">by category, week by week</div></div></div>
+      ${businessCats.length ? finCatTable(businessCats) : `<div class="sub">Nothing logged yet.</div>`}
     </div>
   `;
 }
