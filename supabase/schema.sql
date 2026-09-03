@@ -107,35 +107,26 @@ create table fitness_log (
   created_at timestamptz not null default now()
 );
 
--- ============================= FINANCES (bank-derived summary) =============================
--- Not a live feed: Claude pulls the connected bank account periodically (on
--- request) and upserts pre-aggregated weekly/monthly rows here. Raw
--- transactions never leave the connector — only summaries land in the DB.
-create table finance_periods (
-  period_type text not null check (period_type in ('week','month')),
-  period_key text not null, -- week: 'YYYY-MM-DD' (Monday); month: 'YYYY-MM'
-  period_label text,
-  income numeric default 0,
-  spending numeric default 0,
-  net numeric default 0,
-  primary key (period_type, period_key)
-);
-
-create table finance_categories (
-  period_key text not null, -- 'YYYY-MM'
+-- ============================= FINANCES (financeLog) =============================
+-- Same "sync on request" pattern as fitness/B2B: the Weekly Finances Google
+-- Sheet template has one tab per month (category rows x WEEK1-4 columns),
+-- synced live via known tab gids. id is deterministic ("2026-08__personal__groceries")
+-- so re-syncing just upserts, no dupes.
+create table finance_log (
+  id text primary key, -- "{month_key}__{section}__{category-slug}"
+  month_key text not null, -- "YYYY-MM"
+  section text not null check (section in ('income','personal','business')),
   category text not null,
-  amount numeric default 0,
-  primary key (period_key, category)
+  week1 numeric default 0,
+  week2 numeric default 0,
+  week3 numeric default 0,
+  week4 numeric default 0,
+  month_total numeric default 0,
+  from_sheet boolean default false,
+  created_at timestamptz not null default now()
 );
-
-create table finance_meta (
-  id boolean primary key default true check (id),
-  institution text,
-  account_balance numeric,
-  balance_as_of date,
-  last_synced_at date
-);
-insert into finance_meta (id) values (true);
+-- NOTE: superseded finance_periods / finance_categories / finance_meta tables
+-- from the earlier bank-connector version can be dropped if still present.
 
 -- ============================= DAILY WORKFLOW =============================
 create table workflow_checks (
@@ -194,9 +185,7 @@ alter table leads_log enable row level security;
 alter table ads_acq_leads enable row level security;
 alter table ads_acq_monthly enable row level security;
 alter table fitness_log enable row level security;
-alter table finance_periods enable row level security;
-alter table finance_categories enable row level security;
-alter table finance_meta enable row level security;
+alter table finance_log enable row level security;
 alter table workflow_checks enable row level security;
 alter table workflow_notes enable row level security;
 alter table workflow_reports enable row level security;
@@ -210,9 +199,7 @@ create policy "authenticated full access" on leads_log for all using (auth.role(
 create policy "authenticated full access" on ads_acq_leads for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on ads_acq_monthly for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on fitness_log for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
-create policy "authenticated full access" on finance_periods for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
-create policy "authenticated full access" on finance_categories for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
-create policy "authenticated full access" on finance_meta for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+create policy "authenticated full access" on finance_log for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_checks for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_notes for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "authenticated full access" on workflow_reports for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');

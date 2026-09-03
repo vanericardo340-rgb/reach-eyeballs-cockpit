@@ -394,7 +394,7 @@ function defaultState(){
     adsLog: [],
     leadsLog: [],
     fitnessLog: [],
-    finance: { weekly:[], monthly:[], categories:{}, meta:{} },
+    financeLog: [],
     workflow: { checks:{}, notes:{}, reports:{}, leadCalls:{} },
     adsAcqLeads: [],
     adsAcqMonthly: {},
@@ -422,27 +422,7 @@ const F_ADS = [["id","id"],["clientId","client_id"],["date","date"],["bookings",
 const F_LEADS = [["id","id"],["clientId","client_id"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["offerMade","offer_made"],["cash","cash"],["notes","notes"]];
 const F_AALEADS = [["id","id"],["closerName","closer_name"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["secondCallOutcome","second_call_outcome"],["offerClosedPitched","offer_closed_pitched"],["offerMade","offer_made"],["cash","cash"],["recordingLink","recording_link"]];
 const F_FITNESS = [["id","id"],["date","date"],["weight","weight"],["calories","calories"],["protein","protein"],["foods","foods"],["fromSheet","from_sheet"]];
-async function loadFinance(){
-  const [periodsRes, catsRes, metaRes] = await Promise.all([
-    sb.from("finance_periods").select("*"),
-    sb.from("finance_categories").select("*"),
-    sb.from("finance_meta").select("*").eq("id", true).maybeSingle(),
-  ]);
-  const weekly = (periodsRes.data||[]).filter(r=>r.period_type==="week")
-    .map(r=>({ periodKey:r.period_key, label:r.period_label, income:Number(r.income), spending:Number(r.spending), net:Number(r.net) }))
-    .sort((a,b)=>a.periodKey<b.periodKey?-1:1);
-  const monthly = (periodsRes.data||[]).filter(r=>r.period_type==="month")
-    .map(r=>({ periodKey:r.period_key, label:r.period_label, income:Number(r.income), spending:Number(r.spending), net:Number(r.net) }))
-    .sort((a,b)=>a.periodKey<b.periodKey?-1:1);
-  const categories = {};
-  (catsRes.data||[]).forEach(r=>{
-    (categories[r.period_key] = categories[r.period_key]||[]).push({ category:r.category, amount:Number(r.amount) });
-  });
-  Object.values(categories).forEach(list=>list.sort((a,b)=>b.amount-a.amount));
-  const m = metaRes.data;
-  const meta = m ? { institution:m.institution, accountBalance:m.account_balance===null?null:Number(m.account_balance), balanceAsOf:m.balance_as_of, lastSyncedAt:m.last_synced_at } : {};
-  return { weekly, monthly, categories, meta };
-}
+const F_FINANCE = [["id","id"],["monthKey","month_key"],["section","section"],["category","category"],["week1","week1"],["week2","week2"],["week3","week3"],["week4","week4"],["monthTotal","month_total"],["fromSheet","from_sheet"]];
 const F_AAMONTHLY = [["adSpend","ad_spend"],["lpViews","lp_views"],["paidTrials","paid_trials"],["fullPackage","full_package"],["revenue","revenue"]];
 
 async function loadArrayTable(table, fields){
@@ -530,19 +510,19 @@ async function syncSettings(settings){
   }catch(e){ console.error("sync failed: settings", e); }
 }
 async function loadState(){
-  const [clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, finance, adsAcqMonthly, workflow, settings] = await Promise.all([
+  const [clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, financeLog, adsAcqMonthly, workflow, settings] = await Promise.all([
     loadArrayTable("clients", F_CLIENTS),
     loadArrayTable("b2b_log", F_B2B),
     loadArrayTable("ads_log", F_ADS),
     loadArrayTable("leads_log", F_LEADS),
     loadArrayTable("ads_acq_leads", F_AALEADS),
     loadArrayTable("fitness_log", F_FITNESS),
-    loadFinance(),
+    loadArrayTable("finance_log", F_FINANCE),
     loadMonthlyTable(),
     loadWorkflow(),
     loadSettings(),
   ]);
-  return Object.assign(defaultState(), { clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, finance, adsAcqMonthly, workflow, settings });
+  return Object.assign(defaultState(), { clients, b2bLog, adsLog, leadsLog, adsAcqLeads, fitnessLog, financeLog, adsAcqMonthly, workflow, settings });
 }
 let saveTimer = null;
 function syncAll(){
@@ -552,6 +532,7 @@ function syncAll(){
   syncArrayTable("leads_log", state.leadsLog, F_LEADS);
   syncArrayTable("ads_acq_leads", state.adsAcqLeads, F_AALEADS);
   syncArrayTable("fitness_log", state.fitnessLog, F_FITNESS);
+  syncArrayTable("finance_log", state.financeLog, F_FINANCE);
   syncMonthlyTable(state.adsAcqMonthly);
   syncWorkflow(state.workflow);
   syncSettings(state.settings);
@@ -2327,13 +2308,96 @@ function lineChart(values, color){
   </svg></div>`;
 }
 
-/* ============================= FINANCES ============================= */
-function finMonthLabel(mk){ const [y,m] = mk.split("-").map(Number); return MONTH_ABBR[m-1]+" "+y; }
-function finWeekLabel(wk){ const start=new Date(wk+"T00:00:00Z"); const end=new Date(start); end.setUTCDate(end.getUTCDate()+6); return fmtDateShort(wk)+"–"+fmtDateShort(end.toISOString().slice(0,10)); }
+/* ============================= FINANCES =============================
+   Reads the "Weekly Finances" Google Sheet template directly — one tab per
+   month, category rows × WEEK1-4 columns. Sheet-name-based export silently
+   falls back to the first tab on a miss, so this keys off known tab gids
+   instead (bad gid = real error we can catch). When you duplicate the
+   template for a new month, tell Claude so it can add the gid here. */
+const FINANCE_SHEET_ID = "1lgnvUi3MQ-WbCCl9K3yzb0njybgxwT7IN4ZZaD0N4e8";
+const FINANCE_MONTH_GIDS = { "2026-08": "244576783" };
+function finParseEuro(s){
+  s = (s||"").replace(/[€\s]/g,"").trim();
+  if(!s || s==="-") return 0;
+  const lastComma = s.lastIndexOf(","), lastDot = s.lastIndexOf(".");
+  if(lastComma>-1 && lastDot>-1){ s = lastComma>lastDot ? s.replace(/\./g,"").replace(",",".") : s.replace(/,/g,""); }
+  else if(lastComma>-1){ s = s.replace(",","."); }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+function parseFinanceSheetRows(rows){
+  const entries = [];
+  let mode = null;
+  for(const row of rows){
+    const label = (row[1]||"").trim();
+    if(label==="INCOME SOURCE"){ mode="income"; continue; }
+    if(label==="PERSONAL" && mode!=="income"){ mode="personal"; continue; }
+    if(label==="BUSINESS"){ mode="business"; continue; }
+    if(label===""){ mode=null; continue; }
+    if(label==="TOTAL INCOME"){ mode=null; continue; }
+    if(label==="INCOME" || label==="EXPENSES") continue;
+    if(!mode) continue;
+    const week1=finParseEuro(row[3]), week2=finParseEuro(row[4]), week3=finParseEuro(row[5]), week4=finParseEuro(row[6]);
+    entries.push({ section:mode, category:label, week1, week2, week3, week4, monthTotal: week1+week2+week3+week4 });
+  }
+  return entries;
+}
+async function fetchFinanceMonthLive(monthKey, gid){
+  const url = `https://docs.google.com/spreadsheets/d/${FINANCE_SHEET_ID}/export?format=csv&gid=${gid}`;
+  const res = await fetch(url, { cache:"no-store" });
+  if(!res.ok) throw new Error("finance sheet fetch failed: "+res.status);
+  const rows = parseCSV(await res.text());
+  return parseFinanceSheetRows(rows).map(e=>Object.assign({ monthKey }, e));
+}
+async function fetchFinanceSheetLive(){
+  const results = await Promise.allSettled(
+    Object.entries(FINANCE_MONTH_GIDS).map(([monthKey,gid])=>fetchFinanceMonthLive(monthKey,gid))
+  );
+  return results.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
+}
+function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+function mergeFinanceSheetImport(importEntries){
+  let changed = false;
+  (importEntries||[]).forEach(e=>{
+    const id = `${e.monthKey}__${e.section}__${slugify(e.category)}`;
+    const idx = state.financeLog.findIndex(x=>x.id===id);
+    if(idx>=0){
+      const existing = state.financeLog[idx];
+      if(existing.fromSheet===false) return;
+      state.financeLog[idx] = Object.assign({}, e, { id, fromSheet:true });
+      changed = true;
+    } else {
+      state.financeLog.push(Object.assign({}, e, { id, fromSheet:true }));
+      changed = true;
+    }
+  });
+  if(changed) save();
+}
+
+function finAvailableMonths(){
+  const year = todayStr().slice(0,4);
+  const out = [];
+  for(let m=1;m<=12;m++) out.push(year+"-"+String(m).padStart(2,"0"));
+  return out;
+}
+function finEntriesForMonth(mk){ return state.financeLog.filter(e=>e.monthKey===mk); }
+function finMonthTotals(entries){
+  const sumSection = (section, key) => entries.filter(e=>e.section===section).reduce((a,e)=>a+Number(e[key]||0),0);
+  const weeks = ["week1","week2","week3","week4"].map(wk=>{
+    const income = sumSection("income", wk);
+    const personal = sumSection("personal", wk);
+    const business = sumSection("business", wk);
+    return { income, personal, business, spending: personal+business, net: income-personal-business };
+  });
+  const income = weeks.reduce((a,w)=>a+w.income,0);
+  const personal = weeks.reduce((a,w)=>a+w.personal,0);
+  const business = weeks.reduce((a,w)=>a+w.business,0);
+  return { weeks, income, personal, business, spending: personal+business, net: income-personal-business };
+}
 function finCatBar(cat, amount, maxAmount){
   const pct = maxAmount ? Math.max(2, Math.round(amount/maxAmount*100)) : 0;
   return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0">
-    <div style="width:170px;flex-shrink:0;font-size:12.5px" class="cell-muted">${cat}</div>
+    <div style="width:220px;flex-shrink:0;font-size:12.5px" class="cell-muted">${cat}</div>
     <div style="flex:1;background:var(--surface-2);border-radius:6px;height:9px;overflow:hidden">
       <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px"></div>
     </div>
@@ -2341,70 +2405,114 @@ function finCatBar(cat, amount, maxAmount){
   </div>`;
 }
 function viewFinances(){
-  const fin = state.finance;
-  const monthKeys = Object.keys(fin.categories).sort();
-  if(!monthKeys.includes(uiState.finTab)) uiState.finTab = monthKeys[monthKeys.length-1] || todayStr().slice(0,7);
-  const activeMonth = uiState.finTab;
-  const monthCats = (fin.categories[activeMonth]||[]).filter(c=>c.category!=="Transfers and card payments");
-  const transferRow = (fin.categories[activeMonth]||[]).find(c=>c.category==="Transfers and card payments");
-  const maxCat = monthCats.length ? monthCats[0].amount : 0;
-  const curMonthTotals = fin.monthly.find(m=>m.periodKey===activeMonth);
-  const meta = fin.meta||{};
+  const months = finAvailableMonths();
+  const curMonth = todayStr().slice(0,7);
+  if(uiState.finTab!=="dashboard" && !months.includes(uiState.finTab)) uiState.finTab = curMonth;
+  const activeTab = uiState.finTab;
 
-  const tabsHtml = monthKeys.length ? `
+  const tabsHtml = `
     <div class="b2b-tabbar">
-      ${monthKeys.map(mk=>`<button class="b2b-tab ${activeMonth===mk?'active':''}" data-fin-tab="${mk}">${finMonthLabel(mk)}</button>`).join("")}
-    </div>` : "";
+      <button class="b2b-tab ${activeTab==='dashboard'?'active':''}" data-fin-tab="dashboard">${icon("briefcase")} Dashboard</button>
+      ${months.map(mk=>`<button class="b2b-tab ${activeTab===mk?'active':''}" data-fin-tab="${mk}">${b2bMonthLabel(mk)}${mk===curMonth?'<span class="tab-dot"></span>':''}</button>`).join("")}
+    </div>`;
 
   return `
     <div class="topbar">
       <div>
         <h1>Finances</h1>
-        <div class="sub">${meta.lastSyncedAt ? `synced ${fmtDateLong(meta.lastSyncedAt)}` : "not synced yet"}</div>
+        <div class="sub">synced from your Weekly Finances sheet</div>
       </div>
     </div>
     <div class="content">
-      <div class="panel" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span class="badge good">${icon("check")} ${meta.institution||"bank"} connected</span>
-          <div>
-            <div style="font-size:12.5px;font-weight:600">Current balance: ${meta.accountBalance!=null?fmtEUR(meta.accountBalance):"—"}</div>
-            <div class="sub" style="margin-top:1px">as of ${meta.balanceAsOf?fmtDateLong(meta.balanceAsOf):"—"} · read-only bank connection — ask Claude to "sync my finances" to refresh</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" style="margin-bottom:12px">
-        <div class="panel-head"><div><h3>Weekly cash flow</h3><div class="sub">income vs. spending, most recent weeks</div></div></div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Week</th><th class="num">Income</th><th class="num">Spending</th><th class="num">Net</th></tr></thead>
-            <tbody>
-              ${fin.weekly.length? fin.weekly.slice(-8).map(w=>`
-                <tr>
-                  <td>${finWeekLabel(w.periodKey)}</td>
-                  <td class="num tnum">${fmtEUR(w.income)}</td>
-                  <td class="num tnum">${fmtEUR(w.spending)}</td>
-                  <td class="num tnum" style="color:${w.net>=0?'var(--good,#2f9e58)':'var(--bad,#d8433a)'}">${w.net>=0?"+":""}${fmtEUR(w.net)}</td>
-                </tr>`).join("") : `<tr class="empty-row"><td colspan="4">No data yet.</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="grid cols-4" style="margin-bottom:12px">
-        ${b2bStatCard("Income this month", curMonthTotals?curMonthTotals.income:0, true, 0, "EUR")}
-        ${b2bStatCard("Spending this month", curMonthTotals?curMonthTotals.spending:0, true, 0, "EUR")}
-        ${b2bStatCard("Net this month", curMonthTotals?curMonthTotals.net:0, true, 0, "EUR")}
-        ${b2bStatCard("Categories tracked", monthCats.length)}
-      </div>
-
-      <div class="panel">
-        <div class="panel-head"><div><h3>Where it's going</h3><div class="sub">${finMonthLabel(activeMonth)} spending by category${transferRow?` · excludes ${fmtEUR(transferRow.amount)} in "Transfers and card payments" (mostly transfers to your own other account, not real spend)`:""}</div></div></div>
-        ${monthCats.length ? monthCats.map(c=>finCatBar(c.category, c.amount, maxCat)).join("") : `<div class="sub">No spending recorded for this month.</div>`}
-      </div>
-
+      ${activeTab==="dashboard" ? renderFinDashboard(months) : renderFinMonth(activeTab)}
       ${tabsHtml}
+    </div>
+  `;
+}
+function renderFinDashboard(months){
+  const monthRows = months.map(mk=>({ mk, t: finMonthTotals(finEntriesForMonth(mk)) }));
+  const netVals = monthRows.map(r=>r.t.net);
+  const hasAny = monthRows.some(r=>r.t.income||r.t.personal||r.t.business);
+  return `
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Year net income</h3><div class="sub">income minus personal &amp; business expenses, by month</div></div></div>
+      ${hasAny ? lineChart(netVals, "var(--accent)") : `<div class="sub">No entries yet — fill in the sheet and it'll show up here.</div>`}
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h3>Monthly overview</h3></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th class="num">Income</th><th class="num">Personal</th><th class="num">Business</th><th class="num">Net</th></tr></thead>
+          <tbody>
+            ${monthRows.map(({mk,t})=>`
+              <tr>
+                <td>${b2bMonthLabel(mk)}${mk===todayStr().slice(0,7)?' <span class="tab-dot"></span>':''}</td>
+                <td class="num tnum">${fmtEUR(t.income)}</td>
+                <td class="num tnum">${fmtEUR(t.personal)}</td>
+                <td class="num tnum">${fmtEUR(t.business)}</td>
+                <td class="num tnum" style="color:${t.net>=0?'var(--good,#2f9e58)':'var(--bad,#d8433a)'}">${t.net>=0?"+":""}${fmtEUR(t.net)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function renderFinMonth(mk){
+  const entries = finEntriesForMonth(mk);
+  const t = finMonthTotals(entries);
+  const sheetRows = entries.filter(e=>e.fromSheet).length;
+  const hasGid = !!FINANCE_MONTH_GIDS[mk];
+  const personalCats = entries.filter(e=>e.section==="personal").sort((a,b)=>b.monthTotal-a.monthTotal);
+  const businessCats = entries.filter(e=>e.section==="business").sort((a,b)=>b.monthTotal-a.monthTotal);
+  const maxPersonal = personalCats.length ? personalCats[0].monthTotal : 0;
+  const maxBusiness = businessCats.length ? businessCats[0].monthTotal : 0;
+
+  return `
+    <div class="panel" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${hasGid ? `<span class="badge good">${icon("check")} google sheet</span>` : `<span class="badge warn">${icon("info")} not yet in sheet</span>`}
+        <div>
+          <div style="font-size:12.5px;font-weight:600">${hasGid?"Synced from your Weekly Finances sheet":"No tab for this month yet"}</div>
+          <div class="sub" style="margin-top:1px">${hasGid ? `${sheetRows} categories loaded live · fill in the sheet, it updates here on refresh` : `Duplicate the sheet's month tab, then ask Claude to wire it up`}</div>
+        </div>
+      </div>
+      ${hasGid?`<a class="btn ghost sm" href="https://docs.google.com/spreadsheets/d/${FINANCE_SHEET_ID}/edit#gid=${FINANCE_MONTH_GIDS[mk]}" target="_blank" rel="noopener">Open sheet</a>`:""}
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Weekly cash flow</h3><div class="sub">${b2bMonthLabel(mk)}</div></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Week</th><th class="num">Income</th><th class="num">Spending</th><th class="num">Net</th></tr></thead>
+          <tbody>
+            ${t.weeks.map((w,i)=>`
+              <tr>
+                <td>Week ${i+1}</td>
+                <td class="num tnum">${fmtEUR(w.income)}</td>
+                <td class="num tnum">${fmtEUR(w.spending)}</td>
+                <td class="num tnum" style="color:${w.net>=0?'var(--good,#2f9e58)':'var(--bad,#d8433a)'}">${w.net>=0?"+":""}${fmtEUR(w.net)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid cols-4" style="margin-bottom:12px">
+      ${b2bStatCard("Income this month", t.income, true, 0, "EUR")}
+      ${b2bStatCard("Personal expenses", t.personal, true, 0, "EUR")}
+      ${b2bStatCard("Business expenses", t.business, true, 0, "EUR")}
+      ${b2bStatCard("Net", t.net, true, 0, "EUR")}
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Personal spending</h3><div class="sub">by category, this month</div></div></div>
+      ${personalCats.length ? personalCats.map(c=>finCatBar(c.category, c.monthTotal, maxPersonal)).join("") : `<div class="sub">Nothing logged yet.</div>`}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div><h3>Business spending</h3><div class="sub">by category, this month</div></div></div>
+      ${businessCats.length ? businessCats.map(c=>finCatBar(c.category, c.monthTotal, maxBusiness)).join("") : `<div class="sub">Nothing logged yet.</div>`}
     </div>
   `;
 }
@@ -2894,6 +3002,8 @@ async function boot(){
   catch(e){ console.warn("fitness sheet live sync failed, using snapshot", e); mergeSheetImport(); }
   try{ mergeB2BSheetImport(await fetchB2BSheetLive()); }
   catch(e){ console.warn("B2B sheet live sync failed, using snapshot", e); mergeB2BSheetImport(); }
+  try{ mergeFinanceSheetImport(await fetchFinanceSheetLive()); }
+  catch(e){ console.warn("finance sheet live sync failed", e); }
   renderShell();
 }
 boot();
