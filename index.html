@@ -673,7 +673,6 @@ async function fetchB2BSheetLive(){
   return out;
 }
 const SHEET_SOURCE_URL = "https://docs.google.com/spreadsheets/d/1iCwTZE_tvxvSH6dZ_HIpqBgHZfFtU7y31zy9u4R8Rbc/edit#gid=1261861603";
-const SHEET_SYNCED_AT = "2026-08-17";
 const SHEET_IMPORT = [
   { date:"2026-07-26", weight:null,  calories:500, protein:60, foods:"Chicken & broccoli + protein bar + 1 peach" },
   { date:"2026-07-27", weight:59.7,  calories:480, protein:89, foods:"Chicken & broccoli + can of tuna + 1 peach" },
@@ -743,7 +742,6 @@ function mergeSheetImport(importRows){
    the other B2B_METRICS fields default to 0 for these rows until the sheet has
    more data and you ask Claude to sync again. */
 const B2B_SHEET_SOURCE_URL = "https://docs.google.com/spreadsheets/d/1OLX9a7EtTT2lnIrRPqfs_-chNI-tVBJW7YQmcMVpU0U/edit?gid=1251151466#gid=1251151466";
-const B2B_SHEET_SYNCED_AT = "2026-08-17";
 const B2B_SHEET_IMPORT = [
   { date:"2026-08-03", proposalMS:0 },
   { date:"2026-08-04", openerMS:14 },
@@ -1375,7 +1373,7 @@ function renderB2BMonth(monthKey){
     </div>
 
     <div class="panel">
-      <div class="panel-head"><div><h3>Daily log</h3><div class="sub">${dailyRows.length} ${dailyRows.length===1?"entry":"entries"} this month${dailyRows.some(r=>r.fromSheet)?` · some rows synced from the tracker sheet (last pulled ${fmtDateLong(B2B_SHEET_SYNCED_AT)}) · log there, then ask Claude to sync`:""}</div></div></div>
+      <div class="panel-head"><div><h3>Daily log</h3><div class="sub">${dailyRows.length} ${dailyRows.length===1?"entry":"entries"} this month${dailyRows.some(r=>r.fromSheet)?` · some rows live-synced from the tracker sheet, refreshes every time you load this page`:""}</div></div></div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Date</th>${B2B_METRICS.map(m=>`<th class="num">${m.label}</th>`).join("")}<th></th></tr></thead>
@@ -2201,8 +2199,8 @@ function renderFitMonth(mk){
       <div style="display:flex;align-items:center;gap:10px">
         <span class="badge good">${icon("check")} google sheet</span>
         <div>
-          <div style="font-size:12.5px;font-weight:600">Synced from your Calorie Tracker sheet</div>
-          <div class="sub" style="margin-top:1px">Last pulled ${fmtDateLong(SHEET_SYNCED_AT)} · ${sheetRows} of ${entries.length} entries this month came from the sheet · log there, then ask Claude to "sync my calories" to refresh</div>
+          <div style="font-size:12.5px;font-weight:600">Live-synced from your Calorie Tracker sheet</div>
+          <div class="sub" style="margin-top:1px">Refreshes automatically every time you load this page · ${sheetRows} of ${entries.length} entries this month came from the sheet · log there and reload to see it here</div>
         </div>
       </div>
       <a class="btn ghost sm" href="${SHEET_SOURCE_URL}" target="_blank" rel="noopener">Open sheet</a>
