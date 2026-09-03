@@ -69,8 +69,19 @@
   .fin-table thead th:first-child{ border-radius:10px 0 0 10px; }
   .fin-table thead th:last-child{ border-radius:0 10px 10px 0; }
   .fin-table thead .sub{ color:rgba(255,255,255,.72); }
-  .fin-table tbody tr:last-child{ background:var(--accent-soft); }
+  .fin-table.fin-table-totalrow tbody tr:last-child{ background:var(--accent-soft); }
   .fin-total-pill{ background:linear-gradient(90deg,var(--accent-strong),var(--accent)); color:#fff; font-weight:700; padding:6px 16px; border-radius:20px; display:inline-block; }
+  .card.stat.hero.fit-hero{ flex-direction:row; align-items:center; justify-content:space-between; gap:10px; }
+  .fit-hero-icon{ width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#fff; }
+  .fit-hero-icon svg{ width:26px; height:26px; }
+  .fit-hero-text{ min-width:0; }
+  .fin-table-green thead tr{ background:linear-gradient(90deg,#1F8F57,var(--good)); }
+  .fin-table-green thead th{ color:#fff; padding:11px 12px; border-bottom:none; }
+  .fin-table-green thead th:first-child{ border-radius:10px 0 0 10px; }
+  .fin-table-green thead th:last-child{ border-radius:0 10px 10px 0; }
+  .legend-chip{ display:inline-flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-dim); }
+  .legend-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .fit-log-footer{ margin-top:10px; background:linear-gradient(90deg,var(--good-soft),transparent); border:1px solid var(--good-soft); border-radius:12px; padding:11px 16px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
   .brand-name{ font-weight:700; font-size:14.5px; letter-spacing:-.01em; }
   .brand-sub{ font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; margin-top:1px; }
   nav.navlist{ padding:8px 12px; display:flex; flex-direction:column; gap:2px; }
@@ -2143,6 +2154,12 @@ function fitCalcMetrics(entries){
   const avgWeight = withWeight.length ? withWeight.reduce((a,e)=>a+Number(e.weight),0)/withWeight.length : null;
   return { daysLogged, totalCalories, avgCalories, avgProtein, startWeight, endWeight, weightChange, avgWeight };
 }
+function fitFoodTier(r){
+  const cal = Number(r.calories)||0, pro = Number(r.protein)||0;
+  if(cal>=1200) return { label:"Higher Calorie", color:"var(--warn)" };
+  if(pro>=90) return { label:"High Protein", color:"var(--good)" };
+  return { label:"Balanced", color:"var(--info)" };
+}
 function fmtWeight(v, unit){ return (v===null||v===undefined) ? "—" : v.toFixed(1)+" "+unit; }
 function fmtWeightSigned(v, unit){ return (v===null||v===undefined) ? "—" : (v>0?"+":"")+v.toFixed(1)+" "+unit; }
 function viewFitness(){
@@ -2214,16 +2231,16 @@ function renderFitMonth(mk){
         </div>
       </div>
       <div class="grid cols-4" style="margin-bottom:10px">
-        ${b2bStatCard("Days logged", fmtNum(m.daysLogged), false, 0, null, "calendar", `of ${lastDay} days`)}
-        ${b2bStatCard("Total calories", fmtNum(m.totalCalories), false, 0, null, "flame", "kcal")}
-        ${b2bStatCard("Avg calories/day", m.avgCalories===null?"—":fmtNum(Math.round(m.avgCalories)), false, 0, null, "trending", "kcal")}
-        ${b2bStatCard("Avg protein/day", m.avgProtein===null?"—":fmtNum(Math.round(m.avgProtein))+"g", false, 0, null, "muscle", "protein")}
+        ${fitStatCard("Days logged", fmtNum(m.daysLogged), `of ${lastDay} days`, "calendar", "#7A63E8", "#5B3FD1")}
+        ${fitStatCard("Total calories", fmtNum(m.totalCalories), "kcal", "flame", "#4F8FE8", "#3568C4")}
+        ${fitStatCard("Avg calories/day", m.avgCalories===null?"—":fmtNum(Math.round(m.avgCalories)), "kcal", "trending", "#E39A56", "#C9701F")}
+        ${fitStatCard("Avg protein/day", m.avgProtein===null?"—":fmtNum(Math.round(m.avgProtein))+"g", "protein", "muscle", "#A85BC7", "#82399F")}
       </div>
       <div class="grid cols-4" style="margin-bottom:0">
-        ${b2bStatCard("Start weight", fmtWeight(m.startWeight, unit), false, 0, null, "scale", null)}
-        ${b2bStatCard("End weight", fmtWeight(m.endWeight, unit), false, 0, null, "scale", null)}
-        ${b2bStatCard("Weight change", fmtWeightSigned(m.weightChange, unit), false, 0, null, "trending", m.weightChange===null?null:(m.weightChange<=0?`↓ ${Math.abs(m.weightChange/(m.startWeight||1)*100).toFixed(1)}%`:`↑ ${(m.weightChange/(m.startWeight||1)*100).toFixed(1)}%`))}
-        ${b2bStatCard("Avg weight", fmtWeight(m.avgWeight, unit), false, 0, null, "trending", null)}
+        ${fitStatCard("Start weight", fmtWeight(m.startWeight, unit), null, "scale", "#4FC9A6", "#2FA687")}
+        ${fitStatCard("End weight", fmtWeight(m.endWeight, unit), null, "scale", "#E85C82", "#C23A64")}
+        ${fitStatCard("Weight change", fmtWeightSigned(m.weightChange, unit), m.weightChange===null?null:(m.weightChange<=0?`↓ ${Math.abs(m.weightChange/(m.startWeight||1)*100).toFixed(1)}%`:`↑ ${(m.weightChange/(m.startWeight||1)*100).toFixed(1)}%`), "trending", "#34B674", "#1F8F57")}
+        ${fitStatCard("Avg weight", fmtWeight(m.avgWeight, unit), null, "trending", "#4F8FE8", "#3568C4")}
       </div>
     </div>
 
@@ -2235,7 +2252,7 @@ function renderFitMonth(mk){
         </div>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="fin-table">
           <thead><tr><th>Week</th><th class="num">Days logged</th><th class="num">Total calories</th><th class="num">Avg cal/day</th><th class="num">Avg protein</th><th class="num">Start weight</th><th class="num">End weight</th><th class="num">Weight change</th></tr></thead>
           <tbody>
             ${weekRows.map(({w,m})=>`
@@ -2255,22 +2272,33 @@ function renderFitMonth(mk){
     </div>
 
     <div class="panel">
-      <div class="panel-head"><div><h3>Daily log</h3><div class="sub">${dailyRows.length} ${dailyRows.length===1?"entry":"entries"} this month</div></div></div>
+      <div class="panel-head" style="flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#1F8F57,var(--good))">${icon("list")}</div>
+          <div><h3>Daily log</h3><div class="sub">${dailyRows.length} ${dailyRows.length===1?"entry":"entries"} this month</div></div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <span class="legend-chip"><span class="legend-dot" style="background:var(--good)"></span>High Protein</span>
+          <span class="legend-chip"><span class="legend-dot" style="background:var(--info)"></span>Balanced</span>
+          <span class="legend-chip"><span class="legend-dot" style="background:var(--warn)"></span>Higher Calorie</span>
+        </div>
+      </div>
       <div class="table-wrap">
-        <table>
+        <table class="fin-table-green">
           <thead><tr><th>Date</th><th class="num">Weight (${unit})</th><th class="num">Calories</th><th class="num">Protein</th><th>Food</th><th></th></tr></thead>
           <tbody>
             ${dailyRows.length? dailyRows.map(r=>{
               const maxProtein = Math.max(1, ...dailyRows.map(x=>Number(x.protein)||0));
               const proteinPct = r.protein ? Math.max(4, Math.round(Number(r.protein)/maxProtein*100)) : 0;
+              const tier = fitFoodTier(r);
               return `
               <tr>
-                <td>${fmtDateShort(r.date)} ${r.fromSheet?`<span class="badge good" title="Synced from Google Sheet">sheet</span>`:""}</td>
+                <td><span class="legend-dot" style="background:${tier.color};display:inline-block;margin-right:6px" title="${tier.label}"></span>${fmtDateShort(r.date)} ${r.fromSheet?`<span class="badge good" title="Synced from Google Sheet">sheet</span>`:""}</td>
                 <td class="num tnum">${r.weight?Number(r.weight).toFixed(1):"—"}</td>
                 <td class="num tnum">${r.calories?fmtNum(r.calories):"—"}</td>
                 <td class="num">
                   ${r.protein ? `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
-                    <div style="width:44px;background:var(--surface-2);border-radius:5px;height:6px;overflow:hidden"><div style="width:${proteinPct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:5px"></div></div>
+                    <div style="width:44px;background:var(--surface-2);border-radius:5px;height:6px;overflow:hidden"><div style="width:${proteinPct}%;height:100%;background:${tier.color};border-radius:5px"></div></div>
                     <span class="tnum">${fmtNum(r.protein)}g</span>
                   </div>` : `<span class="cell-muted">—</span>`}
                 </td>
@@ -2283,6 +2311,17 @@ function renderFitMonth(mk){
           </tbody>
         </table>
       </div>
+      ${dailyRows.length ? `<div class="fit-log-footer">
+        <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600">
+          <span style="color:var(--good)">${icon("check")}</span>
+          ${m.daysLogged>=lastDay*0.6?"Great job staying consistent!":"Keep logging to build the habit!"} You logged <b>${m.daysLogged}</b> days this month.
+        </div>
+        <div class="sub" style="display:flex;gap:14px;flex-wrap:wrap">
+          <span>Total Calories: <b class="tnum" style="color:var(--text)">${fmtNum(m.totalCalories)} kcal</b></span>
+          <span>Avg Protein: <b class="tnum" style="color:var(--text)">${m.avgProtein===null?"—":Math.round(m.avgProtein)+"g/day"}</b></span>
+          <span>Weight Change: <b class="tnum" style="color:var(--text)">${fmtWeightSigned(m.weightChange, unit)}</b></span>
+        </div>
+      </div>` : ""}
     </div>
   `;
 }
@@ -2507,6 +2546,16 @@ function finStatCard(label, value, iconName, caption, decor){
     ${finHeroDecor(decor)}
   </div>`;
 }
+function fitStatCard(label, value, caption, iconName, gradFrom, gradTo){
+  return `<div class="card stat hero fit-hero" style="background:linear-gradient(155deg,${gradFrom},${gradTo})">
+    <div class="fit-hero-text">
+      <div class="label">${label}</div>
+      <div class="value-row"><span class="value tnum">${value}</span></div>
+      ${caption?`<div class="caption">${caption}</div>`:""}
+    </div>
+    <div class="fit-hero-icon">${icon(iconName)}</div>
+  </div>`;
+}
 function finCatTable(cats, mk){
   const totals = ["week1","week2","week3","week4","monthTotal"].reduce((a,k)=>{ a[k]=cats.reduce((s,c)=>s+Number(c[k]||0),0); return a; },{});
   const weekLabels = finWeekRanges(mk);
@@ -2527,7 +2576,7 @@ function finCatTable(cats, mk){
   return `
     ${statsHtml}
     <div class="table-wrap">
-    <table class="fin-table">
+    <table class="fin-table fin-table-totalrow">
       <thead><tr>
         <th>Category</th>
         <th class="num">Week 1<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[0]}</div></th>
