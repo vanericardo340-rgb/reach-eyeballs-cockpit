@@ -58,6 +58,9 @@
     background:linear-gradient(145deg,var(--accent),var(--accent2));
     display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px;
   }
+  .brand-mark svg{ width:18px; height:18px; }
+  .fin-mini-icon{ display:inline-flex; width:14px; height:14px; flex-shrink:0; }
+  .fin-mini-icon svg{ width:14px; height:14px; }
   .brand-name{ font-weight:700; font-size:14.5px; letter-spacing:-.01em; }
   .brand-sub{ font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; margin-top:1px; }
   nav.navlist{ padding:8px 12px; display:flex; flex-direction:column; gap:2px; }
@@ -168,6 +171,8 @@
   .card.stat.hero.hero-g2{ background:linear-gradient(155deg,#34B674,#1F8F57); }
   .card.stat.hero.hero-g3{ background:linear-gradient(155deg,#7CB86B,#5B9650); }
   .card.stat.hero.hero-g4{ background:linear-gradient(155deg,#2E9E5B,#1D7A44); }
+  .hero-icon{ width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; margin-bottom:9px; color:#fff; }
+  .hero-icon svg{ width:18px; height:18px; }
 
   .badge{ display:inline-flex; align-items:center; gap:4px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; padding:2.5px 7px; border-radius:20px; }
   .badge.good{ background:var(--good-soft); color:var(--good); }
@@ -373,6 +378,9 @@ const ICONS = {
   trending:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 11 13 15 21 7M21 7h-6M21 7v6"/></svg>`,
   search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>`,
   wallet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3"/><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/><path d="M17 13h3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-3a2 2 0 0 1 0-4z"/></svg>`,
+  user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"/></svg>`,
+  pie:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9l7.5 4.3"/><circle cx="12" cy="12" r="9"/></svg>`,
+  calendar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`,
 };
 function icon(name){ return ICONS[name] || ""; }
 
@@ -1263,10 +1271,15 @@ function b2bMetricCell(m, val){ return `<td class="num tnum">${m.money?fmtMoney(
 function rateCard(label, value){
   return `<div class="card stat rate"><div class="label">${label}</div><div class="value-row"><span class="value tnum">${value}</span></div></div>`;
 }
-function b2bStatCard(label, value, money, green, currency){
+function b2bStatCard(label, value, money, green, currency, iconName, caption){
   const fmt = currency==="EUR" ? fmtEUR : fmtMoney;
   const display = typeof value==="string" ? value : (money?fmt(value):fmtNum(value));
-  return `<div class="card stat hero${green?" hero-g"+green:""}"><div class="label">${label}</div><div class="value-row"><span class="value tnum">${display}</span></div></div>`;
+  return `<div class="card stat hero${green?" hero-g"+green:""}">
+    ${iconName?`<div class="hero-icon">${icon(iconName)}</div>`:""}
+    <div class="label">${label}</div>
+    <div class="value-row"><span class="value tnum">${display}</span></div>
+    ${caption?`<div class="caption">${caption}</div>`:""}
+  </div>`;
 }
 function b2bStageRates(t){
   return [
@@ -2394,13 +2407,80 @@ function finMonthTotals(entries){
   const business = weeks.reduce((a,w)=>a+w.business,0);
   return { weeks, income, personal, business, spending: personal+business, net: income-personal-business };
 }
-function finCatTable(cats){
+function finWeekRanges(mk){
+  const [y,m] = mk.split("-").map(Number);
+  const lastDay = new Date(y,m,0).getDate();
+  const bounds = [[1,7],[8,14],[15,21],[22,lastDay]];
+  return bounds.map(([a,b])=>{
+    const start = `${mk}-${String(a).padStart(2,"0")}`;
+    const end = `${mk}-${String(Math.min(b,lastDay)).padStart(2,"0")}`;
+    return `${a} – ${fmtDateShort(end)}`;
+  });
+}
+function finSectionStats(cats){
+  const total = cats.reduce((a,c)=>a+c.monthTotal,0);
+  const weekTotals = ["week1","week2","week3","week4"].map(k=>cats.reduce((a,c)=>a+Number(c[k]||0),0));
+  let hiIdx=0; weekTotals.forEach((v,i)=>{ if(v>weekTotals[hiIdx]) hiIdx=i; });
+  const top = cats[0]; // cats passed in pre-sorted desc
+  const used = cats.filter(c=>c.monthTotal>0).length;
+  return {
+    total, weeklyAvg: total/4,
+    highestWeekIdx: hiIdx, highestWeekVal: weekTotals[hiIdx],
+    top, topPct: total && top ? Math.round(top.monthTotal/total*100) : 0,
+    used, totalCats: cats.length,
+  };
+}
+function finMiniStat(iconName, colorVar, label, value, sub){
+  return `<div style="flex:1;min-width:130px;background:var(${colorVar}-soft);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
+    <div style="display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(${colorVar});text-transform:uppercase;letter-spacing:.03em">
+      <span class="fin-mini-icon">${icon(iconName)}</span>${label}
+    </div>
+    <div style="font-size:18px;font-weight:700;letter-spacing:-.01em">${value}</div>
+    <div class="sub" style="margin-top:0">${sub}</div>
+  </div>`;
+}
+function finRowIcon(iconName, colorVar){
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:var(${colorVar}-soft);color:var(${colorVar});flex-shrink:0"><span class="fin-mini-icon">${icon(iconName)}</span></span>`;
+}
+function finPill(value, colorVar, sub){
+  return `<div style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px">
+    <span style="background:var(${colorVar}-soft);color:var(${colorVar});font-weight:700;padding:5px 12px;border-radius:20px;font-size:13.5px" class="tnum">${value}</span>
+    ${sub?`<span class="sub">${sub}</span>`:""}
+  </div>`;
+}
+function finCatTable(cats, mk){
   const totals = ["week1","week2","week3","week4","monthTotal"].reduce((a,k)=>{ a[k]=cats.reduce((s,c)=>s+Number(c[k]||0),0); return a; },{});
-  return `<div class="table-wrap">
+  const weekLabels = finWeekRanges(mk);
+  const s = finSectionStats(cats);
+  const maxCat = cats.length ? cats[0].monthTotal : 0;
+
+  const statsHtml = cats.length ? `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      ${finMiniStat("trending","--accent","Total spent", fmtEUR(s.total), "This month")}
+      ${finMiniStat("wallet","--good","Weekly average", fmtEUR(s.weeklyAvg), "Per week")}
+      ${finMiniStat("target","--accent2","Highest week", fmtEUR(s.highestWeekVal), `Week ${s.highestWeekIdx+1}`)}
+      ${finMiniStat("filter","--warn","Top category", s.top?s.top.category:"—", s.top?`${fmtEUR(s.top.monthTotal)} (${s.topPct}%)`:"—")}
+      ${finMiniStat("list","--accent","Categories used", `${s.used} / ${s.totalCats}`, "This month")}
+    </div>` : "";
+
+  return `
+    ${statsHtml}
+    <div class="table-wrap">
     <table>
-      <thead><tr><th>Category</th><th class="num">Week 1</th><th class="num">Week 2</th><th class="num">Week 3</th><th class="num">Week 4</th><th class="num">Month total</th></tr></thead>
+      <thead><tr>
+        <th>Category</th>
+        <th class="num">Week 1<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[0]}</div></th>
+        <th class="num">Week 2<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[1]}</div></th>
+        <th class="num">Week 3<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[2]}</div></th>
+        <th class="num">Week 4<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[3]}</div></th>
+        <th class="num">Month total</th>
+        <th style="width:120px">Share</th>
+      </tr></thead>
       <tbody>
-        ${cats.map(c=>`
+        ${cats.map(c=>{
+          const pct = totals.monthTotal ? Math.round(c.monthTotal/totals.monthTotal*100) : 0;
+          const barPct = maxCat ? Math.max(c.monthTotal?2:0, Math.round(c.monthTotal/maxCat*100)) : 0;
+          return `
           <tr>
             <td class="cell-muted">${c.category}</td>
             <td class="num tnum">${fmtEUR(c.week1)}</td>
@@ -2408,14 +2488,23 @@ function finCatTable(cats){
             <td class="num tnum">${fmtEUR(c.week3)}</td>
             <td class="num tnum">${fmtEUR(c.week4)}</td>
             <td class="num tnum"><b>${fmtEUR(c.monthTotal)}</b></td>
-          </tr>`).join("")}
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;background:var(--surface-2);border-radius:6px;height:7px;overflow:hidden">
+                  <div style="width:${barPct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px"></div>
+                </div>
+                <span class="cell-muted tnum" style="font-size:11px;width:30px;flex-shrink:0;text-align:right">${pct}%</span>
+              </div>
+            </td>
+          </tr>`;}).join("")}
         <tr>
           <td><b>Total</b></td>
           <td class="num tnum"><b>${fmtEUR(totals.week1)}</b></td>
           <td class="num tnum"><b>${fmtEUR(totals.week2)}</b></td>
           <td class="num tnum"><b>${fmtEUR(totals.week3)}</b></td>
           <td class="num tnum"><b>${fmtEUR(totals.week4)}</b></td>
-          <td class="num tnum"><b>${fmtEUR(totals.monthTotal)}</b></td>
+          <td class="num"><span class="pill active tnum" style="font-weight:700">${fmtEUR(totals.monthTotal)}</span></td>
+          <td></td>
         </tr>
       </tbody>
     </table>
@@ -2496,38 +2585,64 @@ function renderFinMonth(mk){
     </div>
 
     <div class="grid cols-4" style="margin-bottom:12px">
-      ${b2bStatCard("Income this month", t.income, true, 0, "EUR")}
-      ${b2bStatCard("Personal expenses", t.personal, true, 0, "EUR")}
-      ${b2bStatCard("Business expenses", t.business, true, 0, "EUR")}
-      ${b2bStatCard("Net", t.net, true, 0, "EUR")}
+      ${b2bStatCard("Income this month", t.income, true, 0, "EUR", "wallet", "Total income")}
+      ${b2bStatCard("Personal expenses", t.personal, true, 0, "EUR", "user", "This month")}
+      ${b2bStatCard("Business expenses", t.business, true, 0, "EUR", "briefcase", "This month")}
+      ${b2bStatCard("Net", t.net, true, 0, "EUR", "pie", "Income − Expenses")}
     </div>
 
     <div class="panel" style="margin-bottom:12px">
-      <div class="panel-head"><div><h3>Weekly cash flow</h3><div class="sub">${b2bMonthLabel(mk)}</div></div></div>
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("calendar")}</div>
+          <div><h3>Weekly cash flow</h3><div class="sub">${b2bMonthLabel(mk)}</div></div>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Week</th><th class="num">Income</th><th class="num">Spending</th><th class="num">Net</th></tr></thead>
+          <thead><tr>
+            <th>${finRowIcon("calendar","--accent")} Week</th>
+            <th class="num">${finRowIcon("trending","--good")} Income</th>
+            <th class="num">${finRowIcon("wallet","--warn")} Spending</th>
+            <th class="num">${finRowIcon("pie","--accent")} Net</th>
+          </tr></thead>
           <tbody>
             ${t.weeks.map((w,i)=>`
               <tr>
-                <td>Week ${i+1}</td>
-                <td class="num tnum">${fmtEUR(w.income)}</td>
-                <td class="num tnum">${fmtEUR(w.spending)}</td>
-                <td class="num tnum" style="color:${w.net>=0?'var(--good,#2f9e58)':'var(--bad,#d8433a)'}">${w.net>=0?"+":""}${fmtEUR(w.net)}</td>
+                <td><div style="display:flex;align-items:center;gap:10px">${finRowIcon("calendar","--accent")}<div><b>Week ${i+1}</b><div class="sub">${finWeekRanges(mk)[i]}</div></div></div></td>
+                <td class="num">${finPill(fmtEUR(w.income), "--good")}</td>
+                <td class="num">${finPill(fmtEUR(w.spending), "--warn")}</td>
+                <td class="num">${finPill((w.net>=0?"+":"")+fmtEUR(w.net), w.net>=0?"--good":"--bad")}</td>
               </tr>`).join("")}
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px">${finRowIcon("trending","--accent")}<b>MONTH TOTAL</b></div></td>
+              <td class="num">${finPill(fmtEUR(t.income), "--good", "Total income")}</td>
+              <td class="num">${finPill(fmtEUR(t.spending), "--warn", "Total spending")}</td>
+              <td class="num">${finPill((t.net>=0?"+":"")+fmtEUR(t.net), t.net>=0?"--good":"--bad", "Net cash flow")}</td>
+            </tr>
           </tbody>
         </table>
       </div>
     </div>
 
     <div class="panel" style="margin-bottom:12px">
-      <div class="panel-head"><div><h3>Personal spending</h3><div class="sub">by category, week by week</div></div></div>
-      ${personalCats.length ? finCatTable(personalCats) : `<div class="sub">Nothing logged yet.</div>`}
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("wallet")}</div>
+          <div><h3>Personal spending</h3><div class="sub">by category, week by week</div></div>
+        </div>
+      </div>
+      ${personalCats.length ? finCatTable(personalCats, mk) : `<div class="sub">Nothing logged yet.</div>`}
     </div>
 
     <div class="panel">
-      <div class="panel-head"><div><h3>Business spending</h3><div class="sub">by category, week by week</div></div></div>
-      ${businessCats.length ? finCatTable(businessCats) : `<div class="sub">Nothing logged yet.</div>`}
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,var(--accent2),var(--accent))">${icon("briefcase")}</div>
+          <div><h3>Business spending</h3><div class="sub">by category, week by week</div></div>
+        </div>
+      </div>
+      ${businessCats.length ? finCatTable(businessCats, mk) : `<div class="sub">Nothing logged yet.</div>`}
     </div>
   `;
 }
