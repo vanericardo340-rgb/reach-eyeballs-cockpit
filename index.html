@@ -15,6 +15,7 @@
     --good:#1a9d6c; --good-soft:rgba(26,157,108,.10);
     --bad:#d8433a; --bad-soft:rgba(216,67,58,.09);
     --warn:#c97a1f; --warn-soft:rgba(224,136,62,.14);
+    --info:#2f7dd8; --info-soft:rgba(47,125,216,.10);
     --radius:16px; --radius-sm:10px;
     --shadow: 0 1px 2px rgba(23,22,31,.04), 0 10px 26px -16px rgba(23,22,31,.16);
   }
@@ -61,6 +62,15 @@
   .brand-mark svg{ width:18px; height:18px; }
   .fin-mini-icon{ display:inline-flex; width:14px; height:14px; flex-shrink:0; }
   .fin-mini-icon svg{ width:14px; height:14px; }
+  .fin-mini-icon-lg{ display:inline-flex; width:19px; height:19px; flex-shrink:0; }
+  .fin-mini-icon-lg svg{ width:19px; height:19px; }
+  .fin-table thead tr{ background:linear-gradient(90deg,var(--accent-strong),var(--accent)); }
+  .fin-table thead th{ color:#fff; padding:11px 12px; border-bottom:none; }
+  .fin-table thead th:first-child{ border-radius:10px 0 0 10px; }
+  .fin-table thead th:last-child{ border-radius:0 10px 10px 0; }
+  .fin-table thead .sub{ color:rgba(255,255,255,.72); }
+  .fin-table tbody tr:last-child{ background:var(--accent-soft); }
+  .fin-total-pill{ background:linear-gradient(90deg,var(--accent-strong),var(--accent)); color:#fff; font-weight:700; padding:6px 16px; border-radius:20px; display:inline-block; }
   .brand-name{ font-weight:700; font-size:14.5px; letter-spacing:-.01em; }
   .brand-sub{ font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; margin-top:1px; }
   nav.navlist{ padding:8px 12px; display:flex; flex-direction:column; gap:2px; }
@@ -173,6 +183,11 @@
   .card.stat.hero.hero-g4{ background:linear-gradient(155deg,#2E9E5B,#1D7A44); }
   .hero-icon{ width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; margin-bottom:9px; color:#fff; }
   .hero-icon svg{ width:18px; height:18px; }
+  .card.stat.hero.fin-hero{ flex-direction:row; align-items:center; gap:14px; position:relative; overflow:hidden; }
+  .fin-hero .hero-icon{ width:46px; height:46px; border-radius:12px; margin-bottom:0; flex-shrink:0; }
+  .fin-hero .hero-icon svg{ width:22px; height:22px; }
+  .fin-hero-text{ display:flex; flex-direction:column; gap:2px; position:relative; z-index:1; }
+  .fin-hero-decor{ position:absolute; right:12px; bottom:10px; pointer-events:none; }
 
   .badge{ display:inline-flex; align-items:center; gap:4px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; padding:2.5px 7px; border-radius:20px; }
   .badge.good{ background:var(--good-soft); color:var(--good); }
@@ -381,6 +396,12 @@ const ICONS = {
   user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-6 8-6s8 2 8 6"/></svg>`,
   pie:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9l7.5 4.3"/><circle cx="12" cy="12" r="9"/></svg>`,
   calendar:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`,
+  flame:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 3-3 4-3 8a3 3 0 0 0 6 0c1 1.5 1 3 1 3a6 6 0 1 1-11-3.5C5 6 9 6 12 2z"/></svg>`,
+  muscle:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15c0-2 1-3 1-5 0-2 1-4 3-4 1 0 1.5.6 1.5 1.5S9 9 9 10c1-1 3-2 5-1s2 2 2 3l2-1 2 2-3 3c-2 2-5 2-7 1l-3 3-2-2 2-2c-1-1-1-2-1-3z"/></svg>`,
+  scale:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="18" height="8" rx="2"/><path d="M8 13V8a4 4 0 0 1 8 0v5"/></svg>`,
+  card:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>`,
+  tag:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.6 2.9 21 11.3a2 2 0 0 1 0 2.8l-6.9 6.9a2 2 0 0 1-2.8 0L2.9 12.6a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h6.2c.5 0 1 .2 1.4.6z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+  arrowDown:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 14l6 6 6-6"/></svg>`,
 };
 function icon(name){ return ICONS[name] || ""; }
 
@@ -2188,35 +2209,47 @@ function renderFitMonth(mk){
     </div>
 
     <div class="panel" style="margin-bottom:12px">
-      <div class="panel-head"><div><h3>Monthly summary</h3><div class="sub">${b2bMonthLabel(mk)} — calculated live from the daily log below</div></div></div>
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("calendar")}</div>
+          <div><h3>Monthly summary</h3><div class="sub">${b2bMonthLabel(mk)} — calculated live from the daily log below</div></div>
+        </div>
+      </div>
+      <div class="grid cols-4" style="margin-bottom:10px">
+        ${b2bStatCard("Days logged", fmtNum(m.daysLogged), false, 0, null, "calendar", `of ${lastDay} days`)}
+        ${b2bStatCard("Total calories", fmtNum(m.totalCalories), false, 0, null, "flame", "kcal")}
+        ${b2bStatCard("Avg calories/day", m.avgCalories===null?"—":fmtNum(Math.round(m.avgCalories)), false, 0, null, "trending", "kcal")}
+        ${b2bStatCard("Avg protein/day", m.avgProtein===null?"—":fmtNum(Math.round(m.avgProtein))+"g", false, 0, null, "muscle", "protein")}
+      </div>
       <div class="grid cols-4" style="margin-bottom:0">
-        ${aaMetricCard("Days logged", fmtNum(m.daysLogged))}
-        ${aaMetricCard("Total calories", fmtNum(m.totalCalories))}
-        ${aaMetricCard("Avg calories/day", m.avgCalories===null?"—":fmtNum(Math.round(m.avgCalories)))}
-        ${aaMetricCard("Avg protein/day", m.avgProtein===null?"—":fmtNum(Math.round(m.avgProtein))+"g")}
-        ${aaMetricCard("Start weight", fmtWeight(m.startWeight, unit))}
-        ${aaMetricCard("End weight", fmtWeight(m.endWeight, unit))}
-        ${aaMetricCard("Weight change", fmtWeightSigned(m.weightChange, unit))}
-        ${aaMetricCard("Avg weight", fmtWeight(m.avgWeight, unit))}
+        ${b2bStatCard("Start weight", fmtWeight(m.startWeight, unit), false, 0, null, "scale", null)}
+        ${b2bStatCard("End weight", fmtWeight(m.endWeight, unit), false, 0, null, "scale", null)}
+        ${b2bStatCard("Weight change", fmtWeightSigned(m.weightChange, unit), false, 0, null, "trending", m.weightChange===null?null:(m.weightChange<=0?`↓ ${Math.abs(m.weightChange/(m.startWeight||1)*100).toFixed(1)}%`:`↑ ${(m.weightChange/(m.startWeight||1)*100).toFixed(1)}%`))}
+        ${b2bStatCard("Avg weight", fmtWeight(m.avgWeight, unit), false, 0, null, "trending", null)}
       </div>
     </div>
 
     <div class="panel" style="margin-bottom:12px">
-      <div class="panel-head"><div><h3>Weekly summary</h3><div class="sub">${b2bMonthLabel(mk)} — Monday–Sunday weeks touching this month</div></div></div>
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("user")}</div>
+          <div><h3>Weekly summary</h3><div class="sub">${b2bMonthLabel(mk)} — Monday–Sunday weeks touching this month</div></div>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Week</th><th class="num">Days logged</th><th class="num">Total calories</th><th class="num">Avg cal/day</th><th class="num">Avg protein</th><th class="num">Start weight</th><th class="num">End weight</th><th class="num">Weight change</th></tr></thead>
           <tbody>
             ${weekRows.map(({w,m})=>`
               <tr>
-                <td>Week ${w.n} <span class="cell-muted">${fmtDateShort(w.start)}–${fmtDateShort(w.end)}</span></td>
+                <td><div style="display:flex;align-items:center;gap:10px">${finRowIcon("calendar","--accent")}<div><b>Week ${w.n}</b><div class="sub">${fmtDateShort(w.start)}–${fmtDateShort(w.end)}</div></div></div></td>
                 <td class="num tnum">${fmtNum(m.daysLogged)}</td>
                 <td class="num tnum">${m.totalCalories?fmtNum(m.totalCalories):"—"}</td>
                 <td class="num tnum">${m.avgCalories===null?"—":fmtNum(Math.round(m.avgCalories))}</td>
                 <td class="num tnum">${m.avgProtein===null?"—":fmtNum(Math.round(m.avgProtein))+"g"}</td>
                 <td class="num tnum">${m.startWeight===null?"—":m.startWeight.toFixed(1)}</td>
                 <td class="num tnum">${m.endWeight===null?"—":m.endWeight.toFixed(1)}</td>
-                <td class="num tnum">${fmtWeightSigned(m.weightChange, "")}</td>
+                <td class="num">${m.weightChange===null?`<span class="cell-muted">—</span>`:`<span style="color:${m.weightChange<=0?'var(--good)':'var(--bad)'};font-weight:700" class="tnum">${fmtWeightSigned(m.weightChange,"")} ${m.weightChange<=0?"↓":"↑"}</span>`}</td>
               </tr>`).join("")}
           </tbody>
         </table>
@@ -2229,18 +2262,26 @@ function renderFitMonth(mk){
         <table>
           <thead><tr><th>Date</th><th class="num">Weight (${unit})</th><th class="num">Calories</th><th class="num">Protein</th><th>Food</th><th></th></tr></thead>
           <tbody>
-            ${dailyRows.length? dailyRows.map(r=>`
+            ${dailyRows.length? dailyRows.map(r=>{
+              const maxProtein = Math.max(1, ...dailyRows.map(x=>Number(x.protein)||0));
+              const proteinPct = r.protein ? Math.max(4, Math.round(Number(r.protein)/maxProtein*100)) : 0;
+              return `
               <tr>
                 <td>${fmtDateShort(r.date)} ${r.fromSheet?`<span class="badge good" title="Synced from Google Sheet">sheet</span>`:""}</td>
                 <td class="num tnum">${r.weight?Number(r.weight).toFixed(1):"—"}</td>
                 <td class="num tnum">${r.calories?fmtNum(r.calories):"—"}</td>
-                <td class="num tnum">${r.protein?fmtNum(r.protein)+"g":"—"}</td>
+                <td class="num">
+                  ${r.protein ? `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+                    <div style="width:44px;background:var(--surface-2);border-radius:5px;height:6px;overflow:hidden"><div style="width:${proteinPct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:5px"></div></div>
+                    <span class="tnum">${fmtNum(r.protein)}g</span>
+                  </div>` : `<span class="cell-muted">—</span>`}
+                </td>
                 <td class="cell-muted" style="white-space:normal;max-width:320px">${r.foods||"—"}</td>
                 <td><div class="row-actions">
                   <button class="icon-btn" data-edit-fit="${r.id}">${icon("edit")}</button>
                   <button class="icon-btn" data-del-fit="${r.id}">${icon("trash")}</button>
                 </div></td>
-              </tr>`).join("") : `<tr class="empty-row"><td colspan="6">No entries logged for ${b2bMonthLabel(mk)} yet.</td></tr>`}
+              </tr>`;}).join("") : `<tr class="empty-row"><td colspan="6">No entries logged for ${b2bMonthLabel(mk)} yet.</td></tr>`}
           </tbody>
         </table>
       </div>
@@ -2431,12 +2472,15 @@ function finSectionStats(cats){
   };
 }
 function finMiniStat(iconName, colorVar, label, value, sub){
-  return `<div style="flex:1;min-width:130px;background:var(${colorVar}-soft);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:3px">
-    <div style="display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(${colorVar});text-transform:uppercase;letter-spacing:.03em">
-      <span class="fin-mini-icon">${icon(iconName)}</span>${label}
+  return `<div style="flex:1;min-width:150px;background:var(${colorVar}-soft);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:12px">
+    <div style="width:42px;height:42px;border-radius:50%;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(${colorVar})">
+      <span class="fin-mini-icon-lg">${icon(iconName)}</span>
     </div>
-    <div style="font-size:18px;font-weight:700;letter-spacing:-.01em">${value}</div>
-    <div class="sub" style="margin-top:0">${sub}</div>
+    <div style="min-width:0">
+      <div style="font-size:12.5px;font-weight:600;color:var(${colorVar})">${label}</div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.01em;color:var(--text)">${value}</div>
+      <div class="sub" style="margin-top:0">${sub}</div>
+    </div>
   </div>`;
 }
 function finRowIcon(iconName, colorVar){
@@ -2448,6 +2492,23 @@ function finPill(value, colorVar, sub){
     ${sub?`<span class="sub">${sub}</span>`:""}
   </div>`;
 }
+function finHeroDecor(kind){
+  if(kind==="spark") return `<svg viewBox="0 0 90 40" class="fin-hero-decor" style="width:74px;height:32px" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 28 L18 18 L30 26 L46 10 L62 20 L78 6 L88 14"/></svg>`;
+  if(kind==="card") return `<svg viewBox="0 0 60 44" class="fin-hero-decor" style="width:48px;height:35px" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5"><rect x="2" y="6" width="52" height="34" rx="6"/><path d="M2 18h52"/></svg>`;
+  if(kind==="bars") return `<svg viewBox="0 0 60 40" class="fin-hero-decor" style="width:44px;height:30px" fill="rgba(255,255,255,.55)"><rect x="2" y="20" width="10" height="18" rx="2"/><rect x="18" y="10" width="10" height="28" rx="2"/><rect x="34" y="0" width="10" height="38" rx="2"/></svg>`;
+  return "";
+}
+function finStatCard(label, value, iconName, caption, decor){
+  return `<div class="card stat hero fin-hero">
+    <div class="hero-icon">${icon(iconName)}</div>
+    <div class="fin-hero-text">
+      <div class="label">${label}</div>
+      <div class="value-row"><span class="value tnum">${value}</span></div>
+      ${caption?`<div class="caption">${caption}</div>`:""}
+    </div>
+    ${finHeroDecor(decor)}
+  </div>`;
+}
 function finCatTable(cats, mk){
   const totals = ["week1","week2","week3","week4","monthTotal"].reduce((a,k)=>{ a[k]=cats.reduce((s,c)=>s+Number(c[k]||0),0); return a; },{});
   const weekLabels = finWeekRanges(mk);
@@ -2457,16 +2518,18 @@ function finCatTable(cats, mk){
   const statsHtml = cats.length ? `
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
       ${finMiniStat("trending","--accent","Total spent", fmtEUR(s.total), "This month")}
-      ${finMiniStat("wallet","--good","Weekly average", fmtEUR(s.weeklyAvg), "Per week")}
-      ${finMiniStat("target","--accent2","Highest week", fmtEUR(s.highestWeekVal), `Week ${s.highestWeekIdx+1}`)}
-      ${finMiniStat("filter","--warn","Top category", s.top?s.top.category:"—", s.top?`${fmtEUR(s.top.monthTotal)} (${s.topPct}%)`:"—")}
-      ${finMiniStat("list","--accent","Categories used", `${s.used} / ${s.totalCats}`, "This month")}
+      ${finMiniStat("card","--good","Weekly average", fmtEUR(s.weeklyAvg), "Per week")}
+      ${finMiniStat("arrowDown","--info","Highest week", fmtEUR(s.highestWeekVal), `Week ${s.highestWeekIdx+1}`)}
+      ${finMiniStat("tag","--warn","Top category", s.top?s.top.category:"—", s.top?`${fmtEUR(s.top.monthTotal)} (${s.topPct}%)`:"—")}
+      ${finMiniStat("pie","--accent","Categories used", `${s.used} / ${s.totalCats}`, "This month")}
     </div>` : "";
+
+  const rankColor = (idx, amount) => !amount ? "var(--border)" : idx===0 ? "var(--bad)" : idx===1 ? "var(--accent2)" : idx===2 ? "#e0b23d" : "var(--border)";
 
   return `
     ${statsHtml}
     <div class="table-wrap">
-    <table>
+    <table class="fin-table">
       <thead><tr>
         <th>Category</th>
         <th class="num">Week 1<div class="sub" style="font-weight:400;text-transform:none">${weekLabels[0]}</div></th>
@@ -2477,12 +2540,13 @@ function finCatTable(cats, mk){
         <th style="width:120px">Share</th>
       </tr></thead>
       <tbody>
-        ${cats.map(c=>{
+        ${cats.map((c,idx)=>{
           const pct = totals.monthTotal ? Math.round(c.monthTotal/totals.monthTotal*100) : 0;
           const barPct = maxCat ? Math.max(c.monthTotal?2:0, Math.round(c.monthTotal/maxCat*100)) : 0;
+          const color = rankColor(idx, c.monthTotal);
           return `
           <tr>
-            <td class="cell-muted">${c.category}</td>
+            <td>${c.category}</td>
             <td class="num tnum">${fmtEUR(c.week1)}</td>
             <td class="num tnum">${fmtEUR(c.week2)}</td>
             <td class="num tnum">${fmtEUR(c.week3)}</td>
@@ -2491,19 +2555,19 @@ function finCatTable(cats, mk){
             <td>
               <div style="display:flex;align-items:center;gap:8px">
                 <div style="flex:1;background:var(--surface-2);border-radius:6px;height:7px;overflow:hidden">
-                  <div style="width:${barPct}%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px"></div>
+                  <div style="width:${barPct}%;height:100%;background:${color};border-radius:6px"></div>
                 </div>
                 <span class="cell-muted tnum" style="font-size:11px;width:30px;flex-shrink:0;text-align:right">${pct}%</span>
               </div>
             </td>
           </tr>`;}).join("")}
         <tr>
-          <td><b>Total</b></td>
+          <td><div style="display:flex;align-items:center;gap:8px">${finRowIcon("trending","--accent")}<b>TOTAL</b></div></td>
           <td class="num tnum"><b>${fmtEUR(totals.week1)}</b></td>
           <td class="num tnum"><b>${fmtEUR(totals.week2)}</b></td>
           <td class="num tnum"><b>${fmtEUR(totals.week3)}</b></td>
           <td class="num tnum"><b>${fmtEUR(totals.week4)}</b></td>
-          <td class="num"><span class="pill active tnum" style="font-weight:700">${fmtEUR(totals.monthTotal)}</span></td>
+          <td class="num"><span class="fin-total-pill tnum">${fmtEUR(totals.monthTotal)}</span></td>
           <td></td>
         </tr>
       </tbody>
@@ -2585,10 +2649,10 @@ function renderFinMonth(mk){
     </div>
 
     <div class="grid cols-4" style="margin-bottom:12px">
-      ${b2bStatCard("Income this month", t.income, true, 0, "EUR", "wallet", "Total income")}
-      ${b2bStatCard("Personal expenses", t.personal, true, 0, "EUR", "user", "This month")}
-      ${b2bStatCard("Business expenses", t.business, true, 0, "EUR", "briefcase", "This month")}
-      ${b2bStatCard("Net", t.net, true, 0, "EUR", "pie", "Income − Expenses")}
+      ${finStatCard("Income this month", fmtEUR(t.income), "wallet", "Total income", "spark")}
+      ${finStatCard("Personal expenses", fmtEUR(t.personal), "user", "This month", "card")}
+      ${finStatCard("Business expenses", fmtEUR(t.business), "briefcase", "This month", "bars")}
+      ${finStatCard("Net", fmtEUR(t.net), "pie", "Income − Expenses", "spark")}
     </div>
 
     <div class="panel" style="margin-bottom:12px">
