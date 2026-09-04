@@ -2638,13 +2638,14 @@ function finCatTable(cats, mk, section){
 function viewFinances(){
   const months = finAvailableMonths();
   const curMonth = todayStr().slice(0,7);
-  if(uiState.finTab!=="dashboard" && !months.includes(uiState.finTab)) uiState.finTab = curMonth;
+  if(uiState.finTab!=="dashboard" && uiState.finTab!=="notes" && !months.includes(uiState.finTab)) uiState.finTab = curMonth;
   const activeTab = uiState.finTab;
 
   const tabsHtml = `
     <div class="b2b-tabbar">
       <button class="b2b-tab ${activeTab==='dashboard'?'active':''}" data-fin-tab="dashboard">${icon("briefcase")} Dashboard</button>
       ${months.map(mk=>`<button class="b2b-tab ${activeTab===mk?'active':''}" data-fin-tab="${mk}">${b2bMonthLabel(mk)}${mk===curMonth?'<span class="tab-dot"></span>':''}</button>`).join("")}
+      <button class="b2b-tab ${activeTab==='notes'?'active':''}" data-fin-tab="notes">${icon("note")} Notes${state.financeNotes.filter(n=>n.note&&n.note.trim()).length?` <span class="cell-muted">(${state.financeNotes.filter(n=>n.note&&n.note.trim()).length})</span>`:""}</button>
     </div>`;
 
   return `
@@ -2655,8 +2656,37 @@ function viewFinances(){
       </div>
     </div>
     <div class="content">
-      ${activeTab==="dashboard" ? renderFinDashboard(months) : renderFinMonth(activeTab)}
+      ${activeTab==="dashboard" ? renderFinDashboard(months) : activeTab==="notes" ? renderFinNotes() : renderFinMonth(activeTab)}
       ${tabsHtml}
+    </div>
+  `;
+}
+function renderFinNotes(){
+  const notes = state.financeNotes.filter(n=>n.note && n.note.trim())
+    .slice().sort((a,b)=> a.monthKey===b.monthKey ? (a.section===b.section ? a.week-b.week : (a.section<b.section?-1:1)) : (a.monthKey<b.monthKey?1:-1));
+  return `
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("note")}</div>
+          <div><h3>All notes</h3><div class="sub">Everything you've logged across every week, most recent month first</div></div>
+        </div>
+      </div>
+      ${notes.length ? notes.map(n=>{
+        const weekLabels = finWeekRanges(n.monthKey);
+        return `
+        <div style="display:flex;gap:14px;padding:13px 0;border-bottom:1px solid var(--border-soft);align-items:flex-start">
+          <div style="flex-shrink:0;width:150px">
+            <div style="font-weight:700;font-size:13px">${b2bMonthLabel(n.monthKey)} · Week ${n.week}</div>
+            <div class="sub" style="margin-top:1px">${weekLabels[n.week-1]||""}</div>
+            <span class="badge ${n.section==="personal"?"good":"warn"}" style="margin-top:5px">${n.section}</span>
+          </div>
+          <div style="flex:1;font-size:13px;white-space:pre-wrap">${n.note}</div>
+          <div class="row-actions" style="flex-shrink:0">
+            <button class="icon-btn" data-fin-note="${n.monthKey}|${n.section}|${n.week}">${icon("edit")}</button>
+          </div>
+        </div>`;
+      }).join("") : `<div class="sub">No notes yet — click the note icon next to any week in Personal or Business spending to add one.</div>`}
     </div>
   `;
 }
