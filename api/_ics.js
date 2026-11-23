@@ -165,14 +165,16 @@ function parseCalendar(text) {
   const lines = unfold(text);
   const events = [];
   let calTz = null;
+  let owner = null;
   let cur = null;
   let depth = 0; // ignore nested components such as VALARM
   for (const raw of lines) {
     const line = parseLine(raw);
     if (!line) continue;
     if (line.name === "X-WR-TIMEZONE" && !cur) calTz = line.value.trim();
+    if (line.name === "X-WR-CALNAME" && !cur && /@/.test(line.value)) owner = line.value.trim().toLowerCase();
     if (line.name === "BEGIN") {
-      if (line.value === "VEVENT") cur = { props: {}, exdates: [] };
+      if (line.value === "VEVENT") cur = { props: {}, exdates: [], attendees: [] };
       else if (cur) depth++;
       continue;
     }
@@ -185,13 +187,35 @@ function parseCalendar(text) {
     }
     if (!cur || depth > 0) continue;
     if (line.name === "EXDATE") cur.exdates.push(line);
+    else if (line.name === "ATTENDEE") cur.attendees.push({ email: line.value.replace(/^mailto:/i, "").trim().toLowerCase(), name: line.params.CN || "", resource: line.params.CUTYPE === "RESOURCE" || line.params.CUTYPE === "ROOM" });
     else if (!cur.props[line.name]) cur.props[line.name] = line;
   }
-  return { events, calTz };
+  return { events, calTz, owner };
+}
+
+/* ---------- meeting or personal block? ----------
+   A meeting has other people: guests on the invite, a video-call link, or a
+   name that reads like a meeting ("Reunião com…", "Call with Ash",
+   "Vanessa x Ash", "Discovery call"). Time blocks you put in for yourself
+   ("Build website", "Gym") are left out of Today's meetings. */
+const MEETING_WORDS = /\b(reuni[aã]o|reuniao|meeting|mtg|call|chamada|liga[cç][aã]o|zoom|google meet|teams|sync|catch[- ]?up|check[- ]?in|stand[- ]?up|standup|demo|discovery|consult(ation)?|onboarding|kick[- ]?off|interview|entrevista|1[:-]1|one[- ]on[- ]one|pitch|presentation|apresenta[cç][aã]o|webinar|coffee|caf[eé]|lunch with|almo[cç]o com|jantar com|dinner with|appointment|consulta)\b/i;
+const WITH_SOMEONE = /(\bwith\s+[A-Z\u00C0-\u017F]|\bw\/\s*\S|\bcom\s+(o |a |os |as )?[A-Z\u00C0-\u017F]|\S\s+(x|<>|&|\/|vs\.?|\+)\s+[A-Z\u00C0-\u017F]|\b(and|e)\s+[A-Z\u00C0-\u017F][a-z\u00C0-\u017F]+\s*$)/;
+function classify(ev, owner) {
+  const title = ev.props.SUMMARY ? unescapeText(ev.props.SUMMARY.value) : "";
+  const organizer = ev.props.ORGANIZER ? ev.props.ORGANIZER.value.replace(/^mailto:/i, "").trim().toLowerCase() : null;
+  const others = (ev.attendees || []).filter((a) => !a.resource && a.email && a.email !== owner && !(owner === null && a.email === organizer));
+  // With no owner address, the organizer is assumed to be you; guests beyond them count.
+  const guests = owner ? others.filter((a) => a.email !== owner) : others;
+  const link = findLink(ev);
+  const conference = !!(link && /meet\.google|zoom\.us|teams\.(microsoft|live)|whereby/i.test(link)) || !!ev.props["X-GOOGLE-CONFERENCE"];
+  const byName = MEETING_WORDS.test(title) || WITH_SOMEONE.test(title);
+  const meeting = guests.length > 0 || conference || byName;
+  const why = guests.length ? "guests" : conference ? "video call" : byName ? "name" : null;
+  return { meeting, why, guests: guests.slice(0, 12).map((g) => g.name || g.email.split("@")[0]) };
 }
 
 function expand(text, fromMs, toMs) {
-  const { events, calTz } = parseCalendar(text);
+  const { events, calTz, owner } = parseCalendar(text);
   const overrides = new Map(); // uid|recurrenceStartMs → event
   const out = [];
 
@@ -205,6 +229,7 @@ function expand(text, fromMs, toMs) {
     location: ev.props.LOCATION ? unescapeText(ev.props.LOCATION.value) : undefined,
     url: findLink(ev),
     status: ev.props.STATUS ? ev.props.STATUS.value : undefined,
+    ...classify(ev, owner),
   });
 
   for (const ev of events) {
@@ -278,4 +303,4 @@ function findLink(ev) {
   return m ? m[1] : undefined;
 }
 
-module.exports = { expand, zonedToUtc };
+module.exports = { expand, zonedToUtc, classify };

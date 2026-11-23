@@ -282,5 +282,14 @@ s = replace_once(s, """async function fetchFinanceSheetLive(){
   await finDiscoverMonths();
   const results""", "finance discover before fetch")
 
+# 11. Tasks tab: two-way ClickUp (This week, Quick fires, All tasks, Leads + notes).
+tasks_js = (here / "tasks-tab.js").read_text()
+tasks_css = (here / "tasks-tab.css").read_text()
+s = replace_once(s, "  .app{ display:flex; min-height:100vh; }", "  .app{ display:flex; min-height:100vh; }\n" + tasks_css, "tasks css")
+s = replace_once(s, "/* ============================= INIT ============================= */", tasks_js + "\n/* ============================= INIT ============================= */", "tasks js")
+s = replace_once(s, '  { id:"ads", label:"Client Ads"', '  { id:"tasks", label:"Tasks", sub:"ClickUp, quick fires & leads", icon:"list", chip:"#7B68EE" },\n  { id:"ads", label:"Client Ads"', "nav tasks")
+s = replace_once(s, '  else if(activeView==="fitness") host.innerHTML = viewFitness();', '  else if(activeView==="fitness") host.innerHTML = viewFitness();\n  else if(activeView==="tasks") host.innerHTML = viewTasks();', "route tasks")
+s = replace_once(s, "  bindViewEvents();\n  cpStartClock();", "  bindViewEvents();\n  if(activeView===\"tasks\") tkBind();\n  cpStartClock();", "bind tasks")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
