@@ -34,7 +34,17 @@ function parseNum(s) {
 const MONTHS = /^(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sep(t(ember)?)?|oct(ober)?|nov(ember)?|dec(ember)?)(\s+\d{4})?$/i;
 
 /** Tabs of the spreadsheet as [{ name, gid }], read from its public HTML view. */
+// The tab list rarely changes; remember it for a few minutes so frequent
+// live refreshes only re-read the cells.
+const TAB_CACHE = new Map();
 async function listTabs(id) {
+  const hit = TAB_CACHE.get(id);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.tabs;
+  const tabs = await listTabsFresh(id);
+  if (tabs.length) TAB_CACHE.set(id, { at: Date.now(), tabs });
+  return tabs;
+}
+async function listTabsFresh(id) {
   const r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/htmlview`, { redirect: "follow" });
   if (!r.ok) return [];
   const html = await r.text();

@@ -4926,7 +4926,7 @@ async function fetchFinanceMonthLive(monthKey, gid){
   return parseFinanceSheetRows(rows).map(e=>Object.assign({ monthKey }, e));
 }
 async function fetchFinanceSheetLive(){
-  await finDiscoverMonths();
+  if(Date.now() - FIN_DISCOVERED_AT > 300000){ await finDiscoverMonths(); FIN_DISCOVERED_AT = Date.now(); }
   const results = await Promise.allSettled(
     Object.entries(FINANCE_MONTH_GIDS).map(([monthKey,gid])=>fetchFinanceMonthLive(monthKey,gid))
   );
@@ -4941,14 +4941,15 @@ function mergeFinanceSheetImport(importEntries){
     if(idx>=0){
       const existing = state.financeLog[idx];
       if(existing.fromSheet===false) return;
-      state.financeLog[idx] = Object.assign({}, e, { id, fromSheet:true });
-      changed = true;
+      const next = Object.assign({}, e, { id, fromSheet:true });
+      if(Object.keys(next).some(k=>String(next[k])!==String(existing[k]))){ state.financeLog[idx] = next; changed = true; }
     } else {
       state.financeLog.push(Object.assign({}, e, { id, fromSheet:true }));
       changed = true;
     }
   });
   if(changed) save();
+  return changed;
 }
 
 function finAvailableMonths(){
@@ -5498,17 +5499,41 @@ async function syncFitnessLive(){
         const ex = state.fitnessLog[idx];
         if(ex.fromSheet===false) return;
         const merged = Object.assign({}, ex, row, { id:ex.id, fromSheet:true, protein: row.protein ?? ex.protein });
-        if(JSON.stringify(merged)!==JSON.stringify(ex)){ state.fitnessLog[idx] = merged; changed = true; }
+        if(Object.keys(merged).some(k=>String(merged[k] ?? "")!==String(ex[k] ?? ""))){ state.fitnessLog[idx] = merged; changed = true; }
       } else { state.fitnessLog.push(Object.assign({}, row, { id:uid(), fromSheet:true })); changed = true; }
     });
     SHEET_SYNCED_AT = todayStr();
-    if(changed) save();
-    if(activeView==="fitness") renderView();
+    if(changed){ save(); if(activeView==="fitness" && sheetsCanRerender()) renderView(); }
+    return changed;
   }catch(e){ console.warn("fitness sheet sync failed", e); }
 }
+let FIN_DISCOVERED_AT = 0;
 async function syncFinancesLive(){
-  try{ mergeFinanceSheetImport(await fetchFinanceSheetLive()); if(activeView==="finances") renderView(); }
-  catch(e){ console.warn("finance sheet sync failed", e); }
+  try{
+    const changed = mergeFinanceSheetImport(await fetchFinanceSheetLive());
+    if(changed && activeView==="finances" && sheetsCanRerender()) renderView();
+  }catch(e){ console.warn("finance sheet sync failed", e); }
+}
+/* Don't redraw under someone who is typing or has a form open. */
+function sheetsCanRerender(){
+  if(document.getElementById("modalOverlay")) return false;
+  const a = document.activeElement;
+  return !(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && document.getElementById("viewhost") && document.getElementById("viewhost").contains(a));
+}
+const SHEETS_POLL_MS = 30000;
+let sheetsBusy = false, sheetsLastAt = 0;
+async function syncSheetsLive(){
+  if(sheetsBusy || document.visibilityState!=="visible") return;
+  sheetsBusy = true;
+  try{ await Promise.all([syncFitnessLive(), syncFinancesLive()]); sheetsLastAt = Date.now(); }
+  finally{ sheetsBusy = false; }
+}
+function startSheetsLive(){
+  syncSheetsLive();
+  setInterval(syncSheetsLive, SHEETS_POLL_MS);
+  const back = ()=>{ if(document.visibilityState==="visible" && Date.now()-sheetsLastAt > 5000) syncSheetsLive(); };
+  document.addEventListener("visibilitychange", back);
+  window.addEventListener("focus", back);
 }
 
 /* ============================= TASKS (ClickUp, two-way) =============================
@@ -6081,8 +6106,7 @@ async function boot(){
   await loadState();
   mergeSheetImport();
   renderShell();
-  syncFitnessLive();
-  syncFinancesLive();
+  startSheetsLive();
   mountChat();
 }
 boot();

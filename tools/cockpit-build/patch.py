@@ -223,7 +223,7 @@ s = replace_once(s, "/* ============================= INIT =====================
         const ex = state.fitnessLog[idx];
         if(ex.fromSheet===false) return;
         const merged = Object.assign({}, ex, row, { id:ex.id, fromSheet:true, protein: row.protein ?? ex.protein });
-        if(JSON.stringify(merged)!==JSON.stringify(ex)){ state.fitnessLog[idx] = merged; changed = true; }
+        if(Object.keys(merged).some(k=>String(merged[k] ?? "")!==String(ex[k] ?? ""))){ state.fitnessLog[idx] = merged; changed = true; }
       } else { state.fitnessLog.push(Object.assign({}, row, { id:uid(), fromSheet:true })); changed = true; }
     });
     SHEET_SYNCED_AT = todayStr();
@@ -290,6 +290,72 @@ s = replace_once(s, "/* ============================= INIT =====================
 s = replace_once(s, '  { id:"ads", label:"Client Ads"', '  { id:"tasks", label:"Tasks", sub:"ClickUp, quick fires & leads", icon:"list", chip:"#7B68EE" },\n  { id:"ads", label:"Client Ads"', "nav tasks")
 s = replace_once(s, '  else if(activeView==="fitness") host.innerHTML = viewFitness();', '  else if(activeView==="fitness") host.innerHTML = viewFitness();\n  else if(activeView==="tasks") host.innerHTML = viewTasks();', "route tasks")
 s = replace_once(s, "  bindViewEvents();\n  cpStartClock();", "  bindViewEvents();\n  if(activeView===\"tasks\") tkBind();\n  cpStartClock();", "bind tasks")
+
+# 12. Live Google Sheets: re-read the calorie tracker and finance sheet every
+#     30 s while the Cockpit is open and visible (and on returning to it),
+#     re-rendering only when something actually changed.
+s = replace_once(s, """    SHEET_SYNCED_AT = todayStr();
+    if(changed) save();
+    if(activeView==="fitness") renderView();""", """    SHEET_SYNCED_AT = todayStr();
+    if(changed){ save(); if(activeView==="fitness" && sheetsCanRerender()) renderView(); }
+    return changed;""", "fitness rerender only on change")
+s = replace_once(s, """      state.financeLog[idx] = Object.assign({}, e, { id, fromSheet:true });
+      changed = true;
+    } else {
+      state.financeLog.push(Object.assign({}, e, { id, fromSheet:true }));
+      changed = true;
+    }
+  });
+  if(changed) save();
+}""", """      const next = Object.assign({}, e, { id, fromSheet:true });
+      if(Object.keys(next).some(k=>String(next[k])!==String(existing[k]))){ state.financeLog[idx] = next; changed = true; }
+    } else {
+      state.financeLog.push(Object.assign({}, e, { id, fromSheet:true }));
+      changed = true;
+    }
+  });
+  if(changed) save();
+  return changed;
+}""", "finance merge only on change")
+s = replace_once(s, """async function syncFinancesLive(){
+  try{ mergeFinanceSheetImport(await fetchFinanceSheetLive()); if(activeView==="finances") renderView(); }
+  catch(e){ console.warn("finance sheet sync failed", e); }
+}""", """let FIN_DISCOVERED_AT = 0;
+async function syncFinancesLive(){
+  try{
+    const changed = mergeFinanceSheetImport(await fetchFinanceSheetLive());
+    if(changed && activeView==="finances" && sheetsCanRerender()) renderView();
+  }catch(e){ console.warn("finance sheet sync failed", e); }
+}
+/* Don't redraw under someone who is typing or has a form open. */
+function sheetsCanRerender(){
+  if(document.getElementById("modalOverlay")) return false;
+  const a = document.activeElement;
+  return !(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && document.getElementById("viewhost") && document.getElementById("viewhost").contains(a));
+}
+const SHEETS_POLL_MS = 30000;
+let sheetsBusy = false, sheetsLastAt = 0;
+async function syncSheetsLive(){
+  if(sheetsBusy || document.visibilityState!=="visible") return;
+  sheetsBusy = true;
+  try{ await Promise.all([syncFitnessLive(), syncFinancesLive()]); sheetsLastAt = Date.now(); }
+  finally{ sheetsBusy = false; }
+}
+function startSheetsLive(){
+  syncSheetsLive();
+  setInterval(syncSheetsLive, SHEETS_POLL_MS);
+  const back = ()=>{ if(document.visibilityState==="visible" && Date.now()-sheetsLastAt > 5000) syncSheetsLive(); };
+  document.addEventListener("visibilitychange", back);
+  window.addEventListener("focus", back);
+}""", "live sheets loop")
+s = replace_once(s, """  syncFitnessLive();
+  syncFinancesLive();
+  mountChat();""", """  startSheetsLive();
+  mountChat();""", "boot live sheets")
+# Discover new month tabs at most every 5 minutes.
+s = replace_once(s, """async function fetchFinanceSheetLive(){
+  await finDiscoverMonths();""", """async function fetchFinanceSheetLive(){
+  if(Date.now() - FIN_DISCOVERED_AT > 300000){ await finDiscoverMonths(); FIN_DISCOVERED_AT = Date.now(); }""", "finance discover throttle")
 
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
