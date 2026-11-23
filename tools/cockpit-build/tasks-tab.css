@@ -89,3 +89,12 @@
     .tk-row{ flex-wrap:wrap; }
     .tk-main{ flex-basis:calc(100% - 40px); }
   }
+
+  .tk-fu{ margin-top:14px; border:1px solid var(--border); border-radius:14px; padding:12px 14px; background:var(--surface); transition:box-shadow .3s; }
+  .tk-fu.flash{ box-shadow:0 0 0 3px rgba(108,79,224,.25); }
+  .tk-fu-h{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .tk-fu-quick{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .tk-fu-quick .tk-chip{ text-transform:none; }
+  .tk-fu-row{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+  .tk-fu-row label{ display:flex; flex-direction:column; gap:4px; font-size:11px; font-weight:600; color:var(--text-dim); }
+  .tk-fu p{ margin-top:8px; }

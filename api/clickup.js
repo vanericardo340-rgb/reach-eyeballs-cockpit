@@ -170,6 +170,11 @@ module.exports = async (req, res) => {
     }
 
     if (action === "leads") {
+      // The caller can pass the list id it got last time, to skip looking it up.
+      if (body.listId && ID_RE.test(String(body.listId))) {
+        const d = await leadsData(token, String(body.listId)).catch(() => null);
+        if (d) return send(res, 200, { connected: true, ...d });
+      }
       const list = await findLeadsList(token);
       if (!list) return send(res, 200, { connected: true, leadsListId: null, leads: [], leadFields: [], statuses: [] });
       return send(res, 200, { connected: true, ...(await leadsData(token, list.id)) });
@@ -272,7 +277,7 @@ module.exports = async (req, res) => {
       const fieldId = String(body.fieldId || "");
       if (!/^[0-9a-f-]{36}$/i.test(fieldId)) return send(res, 400, { error: "Bad field." });
       if (body.value === null || body.value === "") await cu(`/task/${taskId}/field/${fieldId}`, token, { method: "DELETE" });
-      else await cu(`/task/${taskId}/field/${fieldId}`, token, { method: "POST", body: JSON.stringify({ value: body.value }) });
+      else await cu(`/task/${taskId}/field/${fieldId}`, token, { method: "POST", body: JSON.stringify({ value: body.value, ...(body.time ? { value_options: { time: true } } : {}) }) });
       return send(res, 200, { ok: true });
     }
 

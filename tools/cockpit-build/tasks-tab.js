@@ -83,11 +83,94 @@ function tkToggle(id){
   const l = tkList(t.listId); const s = l && l.statuses.find(x=>x.status===status);
   tkUpdate(id, { status }, { status, statusType: s ? s.type : (done ? "open" : "closed"), statusColor: s ? s.color : t.statusColor }, done ? "Reopened in ClickUp" : "Completed in ClickUp");
 }
+function tkSetStatusNow(id, status){
+  const t = tkFind(id); if(!t || t.status===status) return Promise.resolve();
+  const l = tkList(t.listId); const s = l && l.statuses.find(x=>x.status===status);
+  return tkUpdate(id, { status }, { status, statusType: s ? s.type : t.statusType, statusColor: s ? s.color : t.statusColor }, `Moved to “${status}”`);
+}
 function tkSetStatus(id, status){
   const t = tkFind(id); if(!t || t.status===status) return;
-  const l = tkList(t.listId); const s = l && l.statuses.find(x=>x.status===status);
-  tkUpdate(id, { status }, { status, statusType: s ? s.type : t.statusType, statusColor: s ? s.color : t.statusColor }, `Moved to “${status}”`);
+  if(document.getElementById("modalOverlay")){ tkSetStatusNow(id, status); return; } // inside the lead window: the picker is right there
+  tkStatusPrompt(id, status);
 }
+/* ---------- next follow-up (date + time) ---------- */
+function tkFuField(){ return TK.data ? tkLeadField(/follow/i, "date") : null; }
+function tkFuValue(t){ const f = tkFuField(); const v = f ? tkFieldVal(t, f) : null; return v ? Number(v) : null; }
+function tkLocalParts(ms){ const d = new Date(ms); return { date: tkDayKey(ms), time: `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}` }; }
+function tkNextMonday(){ const d = new Date(); const add = ((8 - d.getDay()) % 7) || 7; return tkDayKey(tkStartOfDay(d) + add*TK_DAY); }
+const TK_QUICK_DAYS = [["Today",0],["Tomorrow",1],["In 2 days",2],["In 3 days",3],["Next Monday","mon"],["In a week",7],["In 2 weeks",14]];
+function tkFollowUpPicker(t, opts){
+  opts = opts || {};
+  const cur = tkFuValue(t); const p = cur ? tkLocalParts(cur) : null;
+  const time = p && p.time!=="00:00" && p.time!=="04:00" ? p.time : "10:00";
+  return `<div class="tk-fu" data-tk-fu="${t.id}">
+    <div class="tk-fu-h"><b>${opts.title || "Next follow-up"}</b>${cur?`<span class="tk-faint">Currently ${new Date(cur).toLocaleString("en-GB",{ weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })}</span>`:`<span class="tk-faint">Not scheduled</span>`}</div>
+    <div class="tk-fu-quick">${TK_QUICK_DAYS.map(([l,d])=>`<button type="button" class="tk-chip" data-tk-fu-day="${d}">${l}</button>`).join("")}</div>
+    <div class="tk-fu-row">
+      <label>Date <input type="date" data-tk-fu-date value="${p?p.date:""}" min="${tkDayKey(Date.now())}" /></label>
+      <label>Time <input type="time" data-tk-fu-time value="${time}" /></label>
+      ${opts.inline?`<button type="button" class="btn primary sm" data-tk-fu-save>Save follow-up</button>`:""}
+      ${cur?`<button type="button" class="btn ghost sm" data-tk-fu-clear>Clear</button>`:""}
+    </div>
+    <p class="tk-faint">On that day the lead shows up in the Daily Command Centre’s follow-ups (Morning, Afternoon or Evening, by the time).</p>
+  </div>`;
+}
+function tkBindFollowUpPicker(root, onPick){
+  const box = root.querySelector("[data-tk-fu]"); if(!box) return {};
+  const date = box.querySelector("[data-tk-fu-date]"), time = box.querySelector("[data-tk-fu-time]");
+  box.querySelectorAll("[data-tk-fu-day]").forEach(b=>b.onclick = ()=>{
+    const v = b.dataset.tkFuDay;
+    date.value = v==="mon" ? tkNextMonday() : tkDayKey(tkStartOfDay(Date.now()) + Number(v)*TK_DAY);
+    box.querySelectorAll("[data-tk-fu-day]").forEach(x=>x.classList.toggle("active", x===b));
+    if(onPick) onPick();
+  });
+  const read = ()=>{ if(!date.value) return null; const [y,m,d] = date.value.split("-").map(Number); const [hh,mm] = (time.value||"10:00").split(":").map(Number); return new Date(y, m-1, d, hh, mm).getTime(); };
+  return { box, read, saveBtn: box.querySelector("[data-tk-fu-save]"), clearBtn: box.querySelector("[data-tk-fu-clear]") };
+}
+async function tkSaveFollowUp(id, ms, status){
+  const t = tkFind(id); if(!t) return;
+  const f = tkFuField();
+  if(status && status!==t.status) await tkSetStatusNow(id, status);
+  if(!f){ toast("Your Leads list has no “Follow-up Date” field. Add a Date field with that name in ClickUp."); return; }
+  const before = JSON.stringify(t.fields||[]);
+  const fv = (t.fields||[]).find(x=>x.id===f.id); if(fv) fv.value = ms; else (t.fields = t.fields||[]).push({ id:f.id, value:ms });
+  tkRerender(); tkLeadModalRefresh(id);
+  try{
+    await tkApi({ action:"field", taskId:id, fieldId:f.id, value:ms, time:true });
+    if(ms) tkApi({ action:"comment", taskId:id, text:`${status?`Status → ${status}. `:""}Next follow-up ${new Date(ms).toLocaleString("en-GB",{ weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })} (set in the Cockpit)` }).then(r=>{ const cm = TK.comments[id]; if(cm && r.comment) cm.items.push(r.comment); tkLeadModalRefresh(id); }).catch(()=>{});
+    toast(ms ? `Follow-up set for ${new Date(ms).toLocaleString("en-GB",{ weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })}` : "Follow-up cleared");
+  }catch(e){ t.fields = JSON.parse(before); toast(e.message); }
+  tkRerender(); tkLeadModalRefresh(id);
+}
+/* Changing a lead's status asks when to follow up next (won / lost / closed don't need one). */
+function tkStatusPrompt(id, status){
+  const t = tkFind(id); if(!t) return;
+  const l = tkList(t.listId); const s = l && l.statuses.find(x=>x.status===status);
+  const isLead = t.listId===TK.data.leadsListId;
+  if(!isLead || (s && (s.type==="done" || s.type==="closed"))){
+    tkSetStatusNow(id, status).then(()=>{ if(isLead && tkFuValue(t)) tkSaveFollowUp(id, null); });
+    return;
+  }
+  openModal(`
+    <div class="modal-head"><div><h3>${esc(t.name)}</h3><div class="tk-faint">Moving to <b style="text-transform:capitalize">${esc(status)}</b></div></div><button class="icon-btn" id="modalClose" aria-label="Close">${icon("x")}</button></div>
+    <div class="modal-body">${tkFollowUpPicker(t, { title:"When should you follow up next?" })}</div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="tkFuSkip">Just change the status</button>
+      <button class="btn primary" id="tkFuOk">Save status & follow-up</button>
+    </div>`);
+  const m = document.querySelector("#modalOverlay .modal");
+  const pk = tkBindFollowUpPicker(m);
+  if(pk.clearBtn) pk.clearBtn.onclick = ()=>{ m.querySelector("[data-tk-fu-date]").value = ""; };
+  const cancel = ()=>{ closeModal(); tkRerender(); };
+  document.getElementById("modalClose").onclick = cancel;
+  document.getElementById("tkFuSkip").onclick = ()=>{ closeModal(); tkSetStatusNow(id, status); };
+  document.getElementById("tkFuOk").onclick = ()=>{
+    const ms = pk.read();
+    if(!ms){ toast("Pick a day, or choose “Just change the status”."); return; }
+    closeModal(); tkSaveFollowUp(id, ms, status);
+  };
+}
+
 async function tkSetField(id, fieldId, value, display){
   const t = tkFind(id); if(!t) return;
   const before = JSON.stringify(t.fields||[]);
@@ -269,8 +352,9 @@ function tkLeadModalHtml(t){
       <div class="tk-lead-grid">
         <div class="field field-span2"><label for="tkLeadName">Name</label><input id="tkLeadName" value="${esc(t.name)}" /></div>
         <div class="field"><label for="tkLeadStatus">Status</label><select id="tkLeadStatus">${(list?list.statuses:[]).map(s=>`<option value="${esc(s.status)}" ${s.status===t.status?"selected":""}>${esc(s.status)}</option>`).join("")}</select></div>
-        ${(TK.data.leadFields||[]).map(f=>`<div class="field"><label for="tkf_${f.id}">${esc(f.name)}</label>${tkFieldInput(t,f)}</div>`).join("")}
+        ${(TK.data.leadFields||[]).filter(f=>!(tkFuField() && f.id===tkFuField().id)).map(f=>`<div class="field"><label for="tkf_${f.id}">${esc(f.name)}</label>${tkFieldInput(t,f)}</div>`).join("")}
       </div>
+      ${tkFuField() ? tkFollowUpPicker(t, { inline:true }) : ""}
       <div class="tk-notes">
         <div class="tk-notes-h"><b>Notes</b><span class="tk-faint">Saved as ClickUp comments, with the time they were added</span></div>
         <div class="tk-note-new">
@@ -291,7 +375,13 @@ function tkBindLeadModal(t){
   document.getElementById("modalCancel").onclick = ()=>{ TK_OPEN_LEAD = null; closeModal(); };
   const name = document.getElementById("tkLeadName");
   name.onchange = ()=>{ const v = name.value.trim(); if(v && v!==t.name) tkUpdate(t.id, { name:v }, { name:v }, "Renamed in ClickUp"); };
-  document.getElementById("tkLeadStatus").onchange = (e)=>tkSetStatus(t.id, e.target.value);
+  document.getElementById("tkLeadStatus").onchange = (e)=>{
+    tkSetStatus(t.id, e.target.value);
+    const box = m.querySelector("[data-tk-fu]"); if(box){ box.classList.add("flash"); box.scrollIntoView({ block:"nearest", behavior:"smooth" }); }
+  };
+  const pk = tkBindFollowUpPicker(m);
+  if(pk.saveBtn) pk.saveBtn.onclick = ()=>{ const ms = pk.read(); if(!ms){ toast("Pick a day first."); return; } tkSaveFollowUp(t.id, ms); };
+  if(pk.clearBtn) pk.clearBtn.onclick = ()=>tkSaveFollowUp(t.id, null);
   m.querySelectorAll("[data-tk-field]").forEach(el=>{
     el.onchange = ()=>{
       const f = TK.data.leadFields.find(x=>x.id===el.dataset.tkField); const type = el.dataset.type;
