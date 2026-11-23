@@ -146,5 +146,97 @@ s = replace_once(s, '  document.getElementById("logoutBtn").addEventListener("cl
   });
 """, "nav toggle binding")
 
+# 9. Finances tab restored from the previous Cockpit (Supabase finance_log /
+#    finance_notes + monthly sheet import); Ads Acquisition and Client
+#    Management removed; Fitness syncs live from the Calorie Tracker sheet.
+old = (here / "finances" / "old-cockpit.html").read_text()
+old_lines = old.split("\n")
+def old_block(start_marker, end_marker):
+    a = old.index(start_marker); b = old.index(end_marker, a)
+    return old[a:b]
+fin_js = old_block("/* ============================= FINANCES =============================", "/* ============================= MODALS ============================= */")
+fin_modal = old_block("function financeNoteModal(", "/* ============================= EVENTS ============================= */")
+helpers = "\n".join(l for l in old_lines if l.startswith("function fmtEUR("))
+csv_fn = old_block("function parseCSV(text){", "function parseSheetDateDMY(")
+fin_css = "\n".join(l for l in old.split("</style>")[0].split("\n") if (".fin-" in l or "fin-hero" in l))
+icon_lines = "\n".join(l for l in old_lines if any(l.startswith(f"  {n}:`") for n in ("wallet", "note", "tag", "card")))
+
+s = replace_once(s, "function icon(name){ return ICONS[name] || \"\"; }", "Object.assign(ICONS, {\n" + icon_lines + "\n});\nfunction icon(name){ return ICONS[name] || \"\"; }", "finance icons")
+s = replace_once(s, "  .app{ display:flex; min-height:100vh; }", "  .app{ display:flex; min-height:100vh; }\n" + fin_css, "finance css")
+pre_events = "function exportAllJSON(){"
+extra = ""
+if "function fmtEUR(" not in s: extra += helpers + "\n"
+if "function parseCSV(" not in s: extra += csv_fn + "\n"
+s = s.replace(pre_events, extra + fin_js + "\n" + fin_modal + "\n" + pre_events, 1)
+
+# Data: finance tables join the synced Supabase tables.
+s = replace_once(s, """  ["fitnessLog", "fitness_log", F_FITNESS],
+];""", """  ["fitnessLog", "fitness_log", F_FITNESS],
+  ["financeLog", "finance_log", F_FINANCE],
+  ["financeNotes", "finance_notes", F_FINNOTES],
+];""", "finance tables")
+s = replace_once(s, "const F_AAMONTHLY =", """const F_FINANCE = [["id","id"],["monthKey","month_key"],["section","section"],["category","category"],["week1","week1"],["week2","week2"],["week3","week3"],["week4","week4"],["monthTotal","month_total"],["fromSheet","from_sheet"]];
+const F_FINNOTES = [["id","id"],["monthKey","month_key"],["section","section"],["week","week"],["note","note"]];
+const F_AAMONTHLY =""", "finance mappings")
+
+# Navigation: Today, Client Ads, Fitness, Finances.
+nav_start = s.index('  { id:"adsacq", label:"Ads Acquisition"')
+nav_end = s.index("\n", s.index('  { id:"clients", label:"Client Management"'))
+s = s[:nav_start] + s[nav_end+1:]
+s = replace_once(s, '  { id:"fitness", label:"Fitness", sub:"Weight, calories & food", icon:"heart", chip:"#C2679A" },',
+  '  { id:"fitness", label:"Fitness", sub:"Weight, calories & food", icon:"heart", chip:"#C2679A" },\n  { id:"finances", label:"Finances", sub:"Weekly & monthly spend", icon:"wallet", chip:"#3E9E6C" },', "nav finances")
+s = replace_once(s, '  else if(activeView==="fitness") host.innerHTML = viewFitness();', '  else if(activeView==="fitness") host.innerHTML = viewFitness();\n  else if(activeView==="finances") host.innerHTML = viewFinances();', "route finances")
+s = replace_once(s, '  else if(activeView==="adsacq") host.innerHTML = viewAdsAcq();\n', '', "route adsacq")
+s = replace_once(s, '  else if(activeView==="clients") host.innerHTML = viewClients();\n', '', "route clients")
+# finTab UI state + event bindings
+n_ui = len(re.findall(r"(?:let|const) uiState = \{", s))
+if n_ui != 1: sys.exit(f"patch 'uiState': expected 1 match, found {n_ui}")
+s = re.sub(r"((?:let|const) uiState = \{)", r"\1 finTab: todayStr().slice(0,7),", s, count=1)
+s = replace_once(s, "  /* ---- Daily workflow cockpit ---- */", """  document.querySelectorAll("[data-fin-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.finTab=b.dataset.finTab; renderView(); }));
+  document.querySelectorAll("[data-fin-note]").forEach(b=>b.addEventListener("click", ()=>{
+    const [mk, section, week] = b.dataset.finNote.split("|");
+    financeNoteModal(mk, section, +week);
+  }));
+
+  /* ---- Daily workflow cockpit ---- */""", "finance events")
+
+# Fitness: live sync from every month tab of the Calorie Tracker sheet (server function /api/sheet).
+s = replace_once(s, 'const SHEET_SYNCED_AT = "2026-10-31";', 'let SHEET_SYNCED_AT = "2026-10-31";', "sheet synced let")
+s = replace_once(s, '· log there, then ask Claude to "sync my calories" to refresh</div>', '· syncs automatically from the sheet each time you open the Cockpit</div>', "fitness banner text")
+s = replace_once(s, "  await loadState();\n  mergeSheetImport();\n  renderShell();", """  await loadState();
+  mergeSheetImport();
+  renderShell();
+  syncFitnessLive();
+  syncFinancesLive();""", "boot live syncs")
+s = replace_once(s, "/* ============================= INIT ============================= */", """async function syncFitnessLive(){
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) return;
+    const res = await fetch("/api/sheet", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${session.access_token}` }, body: JSON.stringify({ url: SHEET_SOURCE_URL }) });
+    if(!res.ok) return;
+    const { rows } = await res.json();
+    let changed = false;
+    (rows||[]).forEach(r=>{
+      const row = { date:r.date, weight:r.weight, calories:r.calories, protein:r.protein, foods:r.meals||"" };
+      const idx = state.fitnessLog.findIndex(e=>e.date===row.date);
+      if(idx>=0){
+        const ex = state.fitnessLog[idx];
+        if(ex.fromSheet===false) return;
+        const merged = Object.assign({}, ex, row, { id:ex.id, fromSheet:true, protein: row.protein ?? ex.protein });
+        if(JSON.stringify(merged)!==JSON.stringify(ex)){ state.fitnessLog[idx] = merged; changed = true; }
+      } else { state.fitnessLog.push(Object.assign({}, row, { id:uid(), fromSheet:true })); changed = true; }
+    });
+    SHEET_SYNCED_AT = todayStr();
+    if(changed) save();
+    if(activeView==="fitness") renderView();
+  }catch(e){ console.warn("fitness sheet sync failed", e); }
+}
+async function syncFinancesLive(){
+  try{ mergeFinanceSheetImport(await fetchFinanceSheetLive()); if(activeView==="finances") renderView(); }
+  catch(e){ console.warn("finance sheet sync failed", e); }
+}
+
+/* ============================= INIT ============================= */""", "live sync functions")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")

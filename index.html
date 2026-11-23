@@ -45,6 +45,29 @@
   ::-webkit-scrollbar-track{ background:transparent; }
 
   .app{ display:flex; min-height:100vh; }
+  .fin-mini-icon{ display:inline-flex; width:14px; height:14px; flex-shrink:0; }
+  .fin-mini-icon svg{ width:14px; height:14px; }
+  .fin-mini-icon-lg{ display:inline-flex; width:19px; height:19px; flex-shrink:0; }
+  .fin-mini-icon-lg svg{ width:19px; height:19px; }
+  .fin-table thead tr{ background:linear-gradient(90deg,var(--accent-strong),var(--accent)); }
+  .fin-table thead th{ color:#fff; padding:11px 12px; border-bottom:none; }
+  .fin-table thead th:first-child{ border-radius:10px 0 0 10px; }
+  .fin-table thead th:last-child{ border-radius:0 10px 10px 0; }
+  .fin-table thead .sub{ color:rgba(255,255,255,.72); }
+  .fin-table thead .icon-btn{ color:rgba(255,255,255,.85); vertical-align:middle; }
+  .fin-table thead .icon-btn:hover{ background:rgba(255,255,255,.2); color:#fff; }
+  .fin-table thead .icon-btn svg{ width:13px; height:13px; }
+  .fin-table.fin-table-totalrow tbody tr:last-child{ background:var(--accent-soft); }
+  .fin-total-pill{ background:linear-gradient(90deg,var(--accent-strong),var(--accent)); color:#fff; font-weight:700; padding:6px 16px; border-radius:20px; display:inline-block; }
+  .fin-table-green thead tr{ background:linear-gradient(90deg,#1F8F57,var(--good)); }
+  .fin-table-green thead th{ color:#fff; padding:11px 12px; border-bottom:none; }
+  .fin-table-green thead th:first-child{ border-radius:10px 0 0 10px; }
+  .fin-table-green thead th:last-child{ border-radius:0 10px 10px 0; }
+  .card.stat.hero.fin-hero{ flex-direction:row; align-items:center; gap:14px; position:relative; overflow:hidden; }
+  .fin-hero .hero-icon{ width:46px; height:46px; border-radius:12px; margin-bottom:0; flex-shrink:0; }
+  .fin-hero .hero-icon svg{ width:22px; height:22px; }
+  .fin-hero-text{ display:flex; flex-direction:column; gap:2px; position:relative; z-index:1; }
+  .fin-hero-decor{ position:absolute; right:12px; bottom:10px; pointer-events:none; }
   /* ---------- Assistant ---------- */
   .cc-chat-fab{ position:fixed; right:22px; bottom:22px; z-index:150; width:56px; height:56px; border-radius:50%; border:none; color:#fff; display:flex; align-items:center; justify-content:center;
     background:linear-gradient(145deg,var(--accent),var(--accent2)); box-shadow:0 12px 28px -10px rgba(108,79,224,.55), 0 2px 6px rgba(23,22,31,.18); transition:transform .15s ease, box-shadow .15s ease; }
@@ -961,6 +984,12 @@ const ICONS = {
   book:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5C5.5 4 8.5 4 12 6c3.5-2 6.5-2 9-.5V19c-2.5-1.5-5.5-1.5-9 .5-3.5-2-6.5-2-9-.5z"/><path d="M12 6v13.5"/></svg>`,
   search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>`,
 };
+Object.assign(ICONS, {
+  wallet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h13a1 1 0 0 1 1 1v3"/><path d="M3 7v11a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/><path d="M17 13h3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-3a2 2 0 0 1 0-4z"/></svg>`,
+  card:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>`,
+  tag:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.6 2.9 21 11.3a2 2 0 0 1 0 2.8l-6.9 6.9a2 2 0 0 1-2.8 0L2.9 12.6a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h6.2c.5 0 1 .2 1.4.6z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+  note:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>`,
+});
 function icon(name){ return ICONS[name] || ""; }
 
 /* ============================= STORAGE ============================= */
@@ -1006,6 +1035,8 @@ const F_ADS = [["id","id"],["clientId","client_id"],["date","date"],["bookings",
 const F_LEADS = [["id","id"],["clientId","client_id"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["offerMade","offer_made"],["cash","cash"],["notes","notes"]];
 const F_AALEADS = [["id","id"],["closerName","closer_name"],["date","date"],["leadName","lead_name"],["outcome","outcome"],["secondCallOutcome","second_call_outcome"],["offerClosedPitched","offer_closed_pitched"],["offerMade","offer_made"],["cash","cash"],["recordingLink","recording_link"]];
 const F_FITNESS = [["id","id"],["date","date"],["weight","weight"],["calories","calories"],["protein","protein"],["foods","foods"],["fromSheet","from_sheet"]];
+const F_FINANCE = [["id","id"],["monthKey","month_key"],["section","section"],["category","category"],["week1","week1"],["week2","week2"],["week3","week3"],["week4","week4"],["monthTotal","month_total"],["fromSheet","from_sheet"]];
+const F_FINNOTES = [["id","id"],["monthKey","month_key"],["section","section"],["week","week"],["note","note"]];
 const F_AAMONTHLY = [["adSpend","ad_spend"],["lpViews","lp_views"],["paidTrials","paid_trials"],["fullPackage","full_package"],["revenue","revenue"]];
 
 /* state key → table. Only these tables are read and written. */
@@ -1015,6 +1046,8 @@ const ARRAY_TABLES = [
   ["leadsLog", "leads_log", F_LEADS],
   ["adsAcqLeads", "ads_acq_leads", F_AALEADS],
   ["fitnessLog", "fitness_log", F_FITNESS],
+  ["financeLog", "finance_log", F_FINANCE],
+  ["financeNotes", "finance_notes", F_FINNOTES],
 ];
 
 /* Tables that loaded successfully this session. A table that failed to load is
@@ -1158,7 +1191,7 @@ function uid(){
    whenever you ask it to sync. Entries you edit by hand in the dashboard are
    flagged fromSheet:false so a later sync never overwrites your manual edits. */
 const SHEET_SOURCE_URL = "https://docs.google.com/spreadsheets/d/1iCwTZE_tvxvSH6dZ_HIpqBgHZfFtU7y31zy9u4R8Rbc/edit#gid=1261861603";
-const SHEET_SYNCED_AT = "2026-10-31";
+let SHEET_SYNCED_AT = "2026-10-31";
 const SHEET_IMPORT = [
   {date: "2026-07-26", weight: null, calories: 500, protein: 60.0, foods: "chicken & brocolli + protein bar + 1peach"},
   {date: "2026-07-27", weight: 59.7, calories: 480, protein: 89.0, foods: "chicken & brocoli + can of tuna + 1 peach"},
@@ -1525,12 +1558,11 @@ function sparkline(values, color){
 const NAV = [
   { id:"today", label:"Today", sub:"Your day, start to finish", icon:"sun", chip:"#E0883E" },
   { id:"ads", label:"Client Ads", sub:"Meta Ads performance", icon:"target", chip:"#2563EB" },
-  { id:"adsacq", label:"Ads Acquisition", sub:"Paid ads → leads → sales", icon:"trending", chip:"#C9701F" },
-  { id:"clients", label:"Client Management", sub:"CRM & accounts", icon:"briefcase", chip:"#9D7CF2" },
   { id:"fitness", label:"Fitness", sub:"Weight, calories & food", icon:"heart", chip:"#C2679A" },
+  { id:"finances", label:"Finances", sub:"Weekly & monthly spend", icon:"wallet", chip:"#3E9E6C" },
 ];
 let activeView = "today";
-let uiState = {
+let uiState = { finTab: todayStr().slice(0,7),
   b2bTab: todayStr().slice(0,7), adsPeriod:"7d", adsClient:"all", fitTab: todayStr().slice(0,7), clientFilter:"all", clientSearch:"",
   aaTab: todayStr().slice(0,7),
   aaFilters: { closer:"all", outcome:"all", offer:"all", closedPitched:"all", week:"all", search:"", sortBy:"date", sortDir:"desc" },
@@ -1598,9 +1630,8 @@ function renderView(){
   if(activeView==="today") host.innerHTML = viewCommandCentre();
   else if(activeView==="b2b") host.innerHTML = viewB2B();
   else if(activeView==="ads") host.innerHTML = viewMeta();
-  else if(activeView==="adsacq") host.innerHTML = viewAdsAcq();
-  else if(activeView==="clients") host.innerHTML = viewClients();
   else if(activeView==="fitness") host.innerHTML = viewFitness();
+  else if(activeView==="finances") host.innerHTML = viewFinances();
   bindViewEvents();
   cpStartClock();
 }
@@ -4200,7 +4231,7 @@ function renderFitMonth(mk){
         <span class="badge good">${icon("check")} google sheet</span>
         <div>
           <div style="font-size:12.5px;font-weight:600">Synced from your Calorie Tracker sheet</div>
-          <div class="sub" style="margin-top:1px">Last pulled ${fmtDateLong(SHEET_SYNCED_AT)} · ${sheetRows} of ${entries.length} entries this month came from the sheet · log there, then ask Claude to "sync my calories" to refresh</div>
+          <div class="sub" style="margin-top:1px">Last pulled ${fmtDateLong(SHEET_SYNCED_AT)} · ${sheetRows} of ${entries.length} entries this month came from the sheet · syncs automatically from the sheet each time you open the Cockpit</div>
         </div>
       </div>
       <a class="btn ghost sm" href="${SHEET_SOURCE_URL}" target="_blank" rel="noopener">Open sheet</a>
@@ -4700,10 +4731,462 @@ function bindViewEvents(){
   const clientSearchInput = document.getElementById("clientSearchInput");
   if(clientSearchInput) clientSearchInput.addEventListener("input", e=>{ uiState.clientSearch=e.target.value; renderView(); setTimeout(()=>{ const i=document.getElementById("clientSearchInput"); if(i){ i.focus(); i.setSelectionRange(i.value.length,i.value.length);} },0); });
 
+  document.querySelectorAll("[data-fin-tab]").forEach(b=>b.addEventListener("click", ()=>{ uiState.finTab=b.dataset.finTab; renderView(); }));
+  document.querySelectorAll("[data-fin-note]").forEach(b=>b.addEventListener("click", ()=>{
+    const [mk, section, week] = b.dataset.finNote.split("|");
+    financeNoteModal(mk, section, +week);
+  }));
+
   /* ---- Daily workflow cockpit ---- */
   bindCockpitEvents();
   bindMetaEvents();
 }
+
+function fmtEUR(n){ n = n||0; const neg = n<0; return (neg?"-€":"€")+Math.round(Math.abs(n)).toLocaleString("en-GB"); }
+function parseCSV(text){
+  const rows = []; let row = [], field = "", inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){ if(text[i+1] === '"'){ field += '"'; i++; } else inQuotes = false; }
+      else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === ',') { row.push(field); field = ""; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ""; }
+      else if(c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* ============================= FINANCES =============================
+   Reads the "Weekly Finances" Google Sheet template directly — one tab per
+   month, category rows × WEEK1-4 columns. Sheet-name-based export silently
+   falls back to the first tab on a miss, so this keys off known tab gids
+   instead (bad gid = real error we can catch). When you duplicate the
+   template for a new month, tell Claude so it can add the gid here. */
+const FINANCE_SHEET_ID = "1lgnvUi3MQ-WbCCl9K3yzb0njybgxwT7IN4ZZaD0N4e8";
+const FINANCE_MONTH_GIDS = { "2026-08": "244576783" };
+function finParseEuro(s){
+  s = (s||"").replace(/[€\s]/g,"").trim();
+  if(!s || s==="-") return 0;
+  const lastComma = s.lastIndexOf(","), lastDot = s.lastIndexOf(".");
+  if(lastComma>-1 && lastDot>-1){ s = lastComma>lastDot ? s.replace(/\./g,"").replace(",",".") : s.replace(/,/g,""); }
+  else if(lastComma>-1){ s = s.replace(",","."); }
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+function parseFinanceSheetRows(rows){
+  const entries = [];
+  let mode = null;
+  for(const row of rows){
+    const label = (row[1]||"").trim();
+    if(label==="INCOME SOURCE"){ mode="income"; continue; }
+    if(label==="PERSONAL" && mode!=="income"){ mode="personal"; continue; }
+    if(label==="BUSINESS"){ mode="business"; continue; }
+    if(label===""){ mode=null; continue; }
+    if(label==="TOTAL INCOME"){ mode=null; continue; }
+    if(label==="INCOME" || label==="EXPENSES") continue;
+    if(!mode) continue;
+    const week1=finParseEuro(row[3]), week2=finParseEuro(row[4]), week3=finParseEuro(row[5]), week4=finParseEuro(row[6]);
+    entries.push({ section:mode, category:label, week1, week2, week3, week4, monthTotal: week1+week2+week3+week4 });
+  }
+  return entries;
+}
+async function fetchFinanceMonthLive(monthKey, gid){
+  const url = `https://docs.google.com/spreadsheets/d/${FINANCE_SHEET_ID}/export?format=csv&gid=${gid}`;
+  const res = await fetch(url, { cache:"no-store" });
+  if(!res.ok) throw new Error("finance sheet fetch failed: "+res.status);
+  const rows = parseCSV(await res.text());
+  return parseFinanceSheetRows(rows).map(e=>Object.assign({ monthKey }, e));
+}
+async function fetchFinanceSheetLive(){
+  const results = await Promise.allSettled(
+    Object.entries(FINANCE_MONTH_GIDS).map(([monthKey,gid])=>fetchFinanceMonthLive(monthKey,gid))
+  );
+  return results.filter(r=>r.status==="fulfilled").flatMap(r=>r.value);
+}
+function slugify(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+function mergeFinanceSheetImport(importEntries){
+  let changed = false;
+  (importEntries||[]).forEach(e=>{
+    const id = `${e.monthKey}__${e.section}__${slugify(e.category)}`;
+    const idx = state.financeLog.findIndex(x=>x.id===id);
+    if(idx>=0){
+      const existing = state.financeLog[idx];
+      if(existing.fromSheet===false) return;
+      state.financeLog[idx] = Object.assign({}, e, { id, fromSheet:true });
+      changed = true;
+    } else {
+      state.financeLog.push(Object.assign({}, e, { id, fromSheet:true }));
+      changed = true;
+    }
+  });
+  if(changed) save();
+}
+
+function finAvailableMonths(){
+  const year = todayStr().slice(0,4);
+  const out = [];
+  for(let m=1;m<=12;m++) out.push(year+"-"+String(m).padStart(2,"0"));
+  return out;
+}
+function finEntriesForMonth(mk){ return state.financeLog.filter(e=>e.monthKey===mk); }
+function finMonthTotals(entries){
+  const sumSection = (section, key) => entries.filter(e=>e.section===section).reduce((a,e)=>a+Number(e[key]||0),0);
+  const weeks = ["week1","week2","week3","week4"].map(wk=>{
+    const income = sumSection("income", wk);
+    const personal = sumSection("personal", wk);
+    const business = sumSection("business", wk);
+    return { income, personal, business, spending: personal+business, net: income-personal-business };
+  });
+  const income = weeks.reduce((a,w)=>a+w.income,0);
+  const personal = weeks.reduce((a,w)=>a+w.personal,0);
+  const business = weeks.reduce((a,w)=>a+w.business,0);
+  return { weeks, income, personal, business, spending: personal+business, net: income-personal-business };
+}
+function finWeekRanges(mk){
+  let cursor = mondayOnOrBefore(`${mk}-01`);
+  const out = [];
+  for(let i=0;i<4;i++){
+    out.push(`${fmtDateShort(cursor)} – ${fmtDateShort(addDays(cursor,6))}`);
+    cursor = addDays(cursor,7);
+  }
+  return out;
+}
+function finSectionStats(cats){
+  const total = cats.reduce((a,c)=>a+c.monthTotal,0);
+  const weekTotals = ["week1","week2","week3","week4"].map(k=>cats.reduce((a,c)=>a+Number(c[k]||0),0));
+  let hiIdx=0; weekTotals.forEach((v,i)=>{ if(v>weekTotals[hiIdx]) hiIdx=i; });
+  const top = cats[0]; // cats passed in pre-sorted desc
+  const used = cats.filter(c=>c.monthTotal>0).length;
+  return {
+    total, weeklyAvg: total/4,
+    highestWeekIdx: hiIdx, highestWeekVal: weekTotals[hiIdx],
+    top, topPct: total && top ? Math.round(top.monthTotal/total*100) : 0,
+    used, totalCats: cats.length,
+  };
+}
+function finMiniStat(iconName, colorVar, label, value, sub){
+  return `<div style="flex:1;min-width:150px;background:var(${colorVar}-soft);border-radius:14px;padding:13px 15px;display:flex;align-items:center;gap:12px">
+    <div style="width:42px;height:42px;border-radius:50%;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(${colorVar})">
+      <span class="fin-mini-icon-lg">${icon(iconName)}</span>
+    </div>
+    <div style="min-width:0">
+      <div style="font-size:12.5px;font-weight:600;color:var(${colorVar})">${label}</div>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.01em;color:var(--text)">${value}</div>
+      <div class="sub" style="margin-top:0">${sub}</div>
+    </div>
+  </div>`;
+}
+function finRowIcon(iconName, colorVar){
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:var(${colorVar}-soft);color:var(${colorVar});flex-shrink:0"><span class="fin-mini-icon">${icon(iconName)}</span></span>`;
+}
+function finPill(value, colorVar, sub){
+  return `<div style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:3px">
+    <span style="background:var(${colorVar}-soft);color:var(${colorVar});font-weight:700;padding:5px 12px;border-radius:20px;font-size:13.5px" class="tnum">${value}</span>
+    ${sub?`<span class="sub">${sub}</span>`:""}
+  </div>`;
+}
+function finHeroDecor(kind){
+  if(kind==="spark") return `<svg viewBox="0 0 90 40" class="fin-hero-decor" style="width:74px;height:32px" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 28 L18 18 L30 26 L46 10 L62 20 L78 6 L88 14"/></svg>`;
+  if(kind==="card") return `<svg viewBox="0 0 60 44" class="fin-hero-decor" style="width:48px;height:35px" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5"><rect x="2" y="6" width="52" height="34" rx="6"/><path d="M2 18h52"/></svg>`;
+  if(kind==="bars") return `<svg viewBox="0 0 60 40" class="fin-hero-decor" style="width:44px;height:30px" fill="rgba(255,255,255,.55)"><rect x="2" y="20" width="10" height="18" rx="2"/><rect x="18" y="10" width="10" height="28" rx="2"/><rect x="34" y="0" width="10" height="38" rx="2"/></svg>`;
+  return "";
+}
+function finStatCard(label, value, iconName, caption, decor){
+  return `<div class="card stat hero fin-hero">
+    <div class="hero-icon">${icon(iconName)}</div>
+    <div class="fin-hero-text">
+      <div class="label">${label}</div>
+      <div class="value-row"><span class="value tnum">${value}</span></div>
+      ${caption?`<div class="caption">${caption}</div>`:""}
+    </div>
+    ${finHeroDecor(decor)}
+  </div>`;
+}
+function fitStatCard(label, value, caption, iconName, gradFrom, gradTo){
+  return `<div class="card stat hero fit-hero" style="background:linear-gradient(155deg,${gradFrom},${gradTo})">
+    <div class="fit-hero-text">
+      <div class="label">${label}</div>
+      <div class="value-row"><span class="value tnum">${value}</span></div>
+      ${caption?`<div class="caption">${caption}</div>`:""}
+    </div>
+    <div class="fit-hero-icon">${icon(iconName)}</div>
+  </div>`;
+}
+function finNoteId(mk, section, week){ return `${mk}__${section}__week${week}`; }
+function finNoteFor(mk, section, week){ return state.financeNotes.find(n=>n.id===finNoteId(mk,section,week)); }
+function finNoteBtn(mk, section, week){
+  const n = finNoteFor(mk, section, week);
+  const has = n && n.note && n.note.trim();
+  return `<button class="icon-btn" data-fin-note="${mk}|${section}|${week}" title="${has?"Edit":"Add"} notes for Week ${week}" style="${has?"background:#fff;color:var(--accent)":""}">${icon("note")}</button>`;
+}
+function finCatTable(cats, mk, section){
+  const totals = ["week1","week2","week3","week4","monthTotal"].reduce((a,k)=>{ a[k]=cats.reduce((s,c)=>s+Number(c[k]||0),0); return a; },{});
+  const weekLabels = finWeekRanges(mk);
+  const s = finSectionStats(cats);
+  const maxCat = cats.length ? cats[0].monthTotal : 0;
+
+  const statsHtml = cats.length ? `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      ${finMiniStat("trending","--accent","Total spent", fmtEUR(s.total), "This month")}
+      ${finMiniStat("card","--good","Weekly average", fmtEUR(s.weeklyAvg), "Per week")}
+      ${finMiniStat("arrowDown","--info","Highest week", fmtEUR(s.highestWeekVal), `Week ${s.highestWeekIdx+1}`)}
+      ${finMiniStat("tag","--warn","Top category", s.top?s.top.category:"—", s.top?`${fmtEUR(s.top.monthTotal)} (${s.topPct}%)`:"—")}
+      ${finMiniStat("pie","--accent","Categories used", `${s.used} / ${s.totalCats}`, "This month")}
+    </div>` : "";
+
+  const rankColor = (idx, amount) => !amount ? "var(--border)" : idx===0 ? "var(--bad)" : idx===1 ? "var(--accent2)" : idx===2 ? "#e0b23d" : "var(--border)";
+
+  return `
+    ${statsHtml}
+    <div class="table-wrap">
+    <table class="fin-table fin-table-totalrow">
+      <thead><tr>
+        <th>Category</th>
+        <th class="num"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">${finNoteBtn(mk,section,1)}<span>Week 1</span></div><div class="sub" style="font-weight:400;text-transform:none">${weekLabels[0]}</div></th>
+        <th class="num"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">${finNoteBtn(mk,section,2)}<span>Week 2</span></div><div class="sub" style="font-weight:400;text-transform:none">${weekLabels[1]}</div></th>
+        <th class="num"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">${finNoteBtn(mk,section,3)}<span>Week 3</span></div><div class="sub" style="font-weight:400;text-transform:none">${weekLabels[2]}</div></th>
+        <th class="num"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">${finNoteBtn(mk,section,4)}<span>Week 4</span></div><div class="sub" style="font-weight:400;text-transform:none">${weekLabels[3]}</div></th>
+        <th class="num">Month total</th>
+        <th style="width:120px">Share</th>
+      </tr></thead>
+      <tbody>
+        ${cats.map((c,idx)=>{
+          const pct = totals.monthTotal ? Math.round(c.monthTotal/totals.monthTotal*100) : 0;
+          const barPct = maxCat ? Math.max(c.monthTotal?2:0, Math.round(c.monthTotal/maxCat*100)) : 0;
+          const color = rankColor(idx, c.monthTotal);
+          return `
+          <tr>
+            <td>${c.category}</td>
+            <td class="num tnum">${fmtEUR(c.week1)}</td>
+            <td class="num tnum">${fmtEUR(c.week2)}</td>
+            <td class="num tnum">${fmtEUR(c.week3)}</td>
+            <td class="num tnum">${fmtEUR(c.week4)}</td>
+            <td class="num tnum"><b>${fmtEUR(c.monthTotal)}</b></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;background:var(--surface-2);border-radius:6px;height:7px;overflow:hidden">
+                  <div style="width:${barPct}%;height:100%;background:${color};border-radius:6px"></div>
+                </div>
+                <span class="cell-muted tnum" style="font-size:11px;width:30px;flex-shrink:0;text-align:right">${pct}%</span>
+              </div>
+            </td>
+          </tr>`;}).join("")}
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:8px">${finRowIcon("trending","--accent")}<b>TOTAL</b></div></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week1)}</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week2)}</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week3)}</b></td>
+          <td class="num tnum"><b>${fmtEUR(totals.week4)}</b></td>
+          <td class="num"><span class="fin-total-pill tnum">${fmtEUR(totals.monthTotal)}</span></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+function viewFinances(){
+  const months = finAvailableMonths();
+  const curMonth = todayStr().slice(0,7);
+  if(uiState.finTab!=="dashboard" && uiState.finTab!=="notes" && !months.includes(uiState.finTab)) uiState.finTab = curMonth;
+  const activeTab = uiState.finTab;
+
+  const tabsHtml = `
+    <div class="b2b-tabbar">
+      <button class="b2b-tab ${activeTab==='dashboard'?'active':''}" data-fin-tab="dashboard">${icon("briefcase")} Dashboard</button>
+      ${months.map(mk=>`<button class="b2b-tab ${activeTab===mk?'active':''}" data-fin-tab="${mk}">${b2bMonthLabel(mk)}${mk===curMonth?'<span class="tab-dot"></span>':''}</button>`).join("")}
+      <button class="b2b-tab ${activeTab==='notes'?'active':''}" data-fin-tab="notes">${icon("note")} Notes${state.financeNotes.filter(n=>n.note&&n.note.trim()).length?` <span class="cell-muted">(${state.financeNotes.filter(n=>n.note&&n.note.trim()).length})</span>`:""}</button>
+    </div>`;
+
+  return `
+    <div class="topbar">
+      <div>
+        <h1>Finances</h1>
+        <div class="sub">synced from your Weekly Finances sheet</div>
+      </div>
+    </div>
+    <div class="content">
+      ${activeTab==="dashboard" ? renderFinDashboard(months) : activeTab==="notes" ? renderFinNotes() : renderFinMonth(activeTab)}
+      ${tabsHtml}
+    </div>
+  `;
+}
+function renderFinNotes(){
+  const notes = state.financeNotes.filter(n=>n.note && n.note.trim())
+    .slice().sort((a,b)=> a.monthKey===b.monthKey ? (a.section===b.section ? a.week-b.week : (a.section<b.section?-1:1)) : (a.monthKey<b.monthKey?1:-1));
+  return `
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("note")}</div>
+          <div><h3>All notes</h3><div class="sub">Everything you've logged across every week, most recent month first</div></div>
+        </div>
+      </div>
+      ${notes.length ? notes.map(n=>{
+        const weekLabels = finWeekRanges(n.monthKey);
+        return `
+        <div style="display:flex;gap:14px;padding:13px 0;border-bottom:1px solid var(--border-soft);align-items:flex-start">
+          <div style="flex-shrink:0;width:150px">
+            <div style="font-weight:700;font-size:13px">${b2bMonthLabel(n.monthKey)} · Week ${n.week}</div>
+            <div class="sub" style="margin-top:1px">${weekLabels[n.week-1]||""}</div>
+            <span class="badge ${n.section==="personal"?"good":"warn"}" style="margin-top:5px">${n.section}</span>
+          </div>
+          <div style="flex:1;font-size:13px;white-space:pre-wrap">${n.note}</div>
+          <div class="row-actions" style="flex-shrink:0">
+            <button class="icon-btn" data-fin-note="${n.monthKey}|${n.section}|${n.week}">${icon("edit")}</button>
+          </div>
+        </div>`;
+      }).join("") : `<div class="sub">No notes yet — click the note icon next to any week in Personal or Business spending to add one.</div>`}
+    </div>
+  `;
+}
+function renderFinDashboard(months){
+  const monthRows = months.map(mk=>({ mk, t: finMonthTotals(finEntriesForMonth(mk)) }));
+  const netVals = monthRows.map(r=>r.t.net);
+  const hasAny = monthRows.some(r=>r.t.income||r.t.personal||r.t.business);
+  return `
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head"><div><h3>Year net income</h3><div class="sub">income minus personal &amp; business expenses, by month</div></div></div>
+      ${hasAny ? lineChart(netVals, "var(--accent)") : `<div class="sub">No entries yet — fill in the sheet and it'll show up here.</div>`}
+    </div>
+    <div class="panel">
+      <div class="panel-head"><div><h3>Monthly overview</h3></div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th class="num">Income</th><th class="num">Personal</th><th class="num">Business</th><th class="num">Net</th></tr></thead>
+          <tbody>
+            ${monthRows.map(({mk,t})=>`
+              <tr>
+                <td>${b2bMonthLabel(mk)}${mk===todayStr().slice(0,7)?' <span class="tab-dot"></span>':''}</td>
+                <td class="num tnum">${fmtEUR(t.income)}</td>
+                <td class="num tnum">${fmtEUR(t.personal)}</td>
+                <td class="num tnum">${fmtEUR(t.business)}</td>
+                <td class="num tnum" style="color:${t.net>=0?'var(--good,#2f9e58)':'var(--bad,#d8433a)'}">${t.net>=0?"+":""}${fmtEUR(t.net)}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+function renderFinMonth(mk){
+  const entries = finEntriesForMonth(mk);
+  const t = finMonthTotals(entries);
+  const sheetRows = entries.filter(e=>e.fromSheet).length;
+  const hasGid = !!FINANCE_MONTH_GIDS[mk];
+  const personalCats = entries.filter(e=>e.section==="personal").sort((a,b)=>b.monthTotal-a.monthTotal);
+  const businessCats = entries.filter(e=>e.section==="business").sort((a,b)=>b.monthTotal-a.monthTotal);
+
+  return `
+    <div class="panel" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px">
+        ${hasGid ? `<span class="badge good">${icon("check")} google sheet</span>` : `<span class="badge warn">${icon("info")} not yet in sheet</span>`}
+        <div>
+          <div style="font-size:12.5px;font-weight:600">${hasGid?"Synced from your Weekly Finances sheet":"No tab for this month yet"}</div>
+          <div class="sub" style="margin-top:1px">${hasGid ? `${sheetRows} categories loaded live · fill in the sheet, it updates here on refresh` : `Duplicate the sheet's month tab, then ask Claude to wire it up`}</div>
+        </div>
+      </div>
+      ${hasGid?`<a class="btn ghost sm" href="https://docs.google.com/spreadsheets/d/${FINANCE_SHEET_ID}/edit#gid=${FINANCE_MONTH_GIDS[mk]}" target="_blank" rel="noopener">Open sheet</a>`:""}
+    </div>
+
+    <div class="grid cols-4" style="margin-bottom:12px">
+      ${finStatCard("Income this month", fmtEUR(t.income), "wallet", "Total income", "spark")}
+      ${finStatCard("Personal expenses", fmtEUR(t.personal), "user", "This month", "card")}
+      ${finStatCard("Business expenses", fmtEUR(t.business), "briefcase", "This month", "bars")}
+      ${finStatCard("Net", fmtEUR(t.net), "pie", "Income − Expenses", "spark")}
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("calendar")}</div>
+          <div><h3>Weekly cash flow</h3><div class="sub">${b2bMonthLabel(mk)}</div></div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>${finRowIcon("calendar","--accent")} Week</th>
+            <th class="num">${finRowIcon("trending","--good")} Income</th>
+            <th class="num">${finRowIcon("wallet","--warn")} Spending</th>
+            <th class="num">${finRowIcon("pie","--accent")} Net</th>
+          </tr></thead>
+          <tbody>
+            ${t.weeks.map((w,i)=>`
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:10px">${finRowIcon("calendar","--accent")}<div><b>Week ${i+1}</b><div class="sub">${finWeekRanges(mk)[i]}</div></div></div></td>
+                <td class="num">${finPill(fmtEUR(w.income), "--good")}</td>
+                <td class="num">${finPill(fmtEUR(w.spending), "--warn")}</td>
+                <td class="num">${finPill((w.net>=0?"+":"")+fmtEUR(w.net), w.net>=0?"--good":"--bad")}</td>
+              </tr>`).join("")}
+            <tr>
+              <td><div style="display:flex;align-items:center;gap:10px">${finRowIcon("trending","--accent")}<b>MONTH TOTAL</b></div></td>
+              <td class="num">${finPill(fmtEUR(t.income), "--good", "Total income")}</td>
+              <td class="num">${finPill(fmtEUR(t.spending), "--warn", "Total spending")}</td>
+              <td class="num">${finPill((t.net>=0?"+":"")+fmtEUR(t.net), t.net>=0?"--good":"--bad", "Net cash flow")}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:12px">
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px">${icon("wallet")}</div>
+          <div><h3>Personal spending</h3><div class="sub">by category, week by week</div></div>
+        </div>
+      </div>
+      ${personalCats.length ? finCatTable(personalCats, mk, "personal") : `<div class="sub">Nothing logged yet.</div>`}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:11px">
+          <div class="brand-mark" style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,var(--accent2),var(--accent))">${icon("briefcase")}</div>
+          <div><h3>Business spending</h3><div class="sub">by category, week by week</div></div>
+        </div>
+      </div>
+      ${businessCats.length ? finCatTable(businessCats, mk, "business") : `<div class="sub">Nothing logged yet.</div>`}
+    </div>
+  `;
+}
+
+
+function financeNoteModal(mk, section, week){
+  const id = finNoteId(mk, section, week);
+  const existing = finNoteFor(mk, section, week);
+  const sectionLabel = section==="personal" ? "Personal" : "Business";
+  openModal(`
+    <div class="modal-head"><h3>${sectionLabel} — Week ${week} notes</h3><button class="icon-btn" id="modalClose">${icon("x")}</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field field-span2"><label>What happened / what you were spending on</label><textarea id="fn_note" rows="6" placeholder="e.g. birthday dinner out, laptop repair, stocked up on groceries for the month...">${existing?existing.note||"":""}</textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${existing?`<button class="btn danger" id="modalDelete">Delete</button>`:""}
+      <button class="btn ghost" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalSave">Save note</button>
+    </div>
+  `);
+  document.getElementById("modalClose").onclick = closeModal;
+  document.getElementById("modalCancel").onclick = closeModal;
+  if(existing) document.getElementById("modalDelete").onclick = ()=>{ state.financeNotes = state.financeNotes.filter(n=>n.id!==id); save(); closeModal(); renderView(); toast("Note deleted"); };
+  document.getElementById("modalSave").onclick = ()=>{
+    const note = document.getElementById("fn_note").value;
+    const entry = { id, monthKey:mk, section, week, note };
+    if(existing){ state.financeNotes = state.financeNotes.map(n=>n.id===id?entry:n); }
+    else{ state.financeNotes.push(entry); }
+    save(); closeModal(); renderView(); toast("Saved");
+  };
+}
+
 
 function exportAllJSON(){
   const data = JSON.stringify(state, null, 2);
@@ -4877,6 +5360,34 @@ function mountChat(){
 }
 function unmountChat(){ const f=document.getElementById("ccChatFab"); if(f) f.parentElement.remove(); }
 
+async function syncFitnessLive(){
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) return;
+    const res = await fetch("/api/sheet", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${session.access_token}` }, body: JSON.stringify({ url: SHEET_SOURCE_URL }) });
+    if(!res.ok) return;
+    const { rows } = await res.json();
+    let changed = false;
+    (rows||[]).forEach(r=>{
+      const row = { date:r.date, weight:r.weight, calories:r.calories, protein:r.protein, foods:r.meals||"" };
+      const idx = state.fitnessLog.findIndex(e=>e.date===row.date);
+      if(idx>=0){
+        const ex = state.fitnessLog[idx];
+        if(ex.fromSheet===false) return;
+        const merged = Object.assign({}, ex, row, { id:ex.id, fromSheet:true, protein: row.protein ?? ex.protein });
+        if(JSON.stringify(merged)!==JSON.stringify(ex)){ state.fitnessLog[idx] = merged; changed = true; }
+      } else { state.fitnessLog.push(Object.assign({}, row, { id:uid(), fromSheet:true })); changed = true; }
+    });
+    SHEET_SYNCED_AT = todayStr();
+    if(changed) save();
+    if(activeView==="fitness") renderView();
+  }catch(e){ console.warn("fitness sheet sync failed", e); }
+}
+async function syncFinancesLive(){
+  try{ mergeFinanceSheetImport(await fetchFinanceSheetLive()); if(activeView==="finances") renderView(); }
+  catch(e){ console.warn("finance sheet sync failed", e); }
+}
+
 /* ============================= INIT ============================= */
 function renderLogin(){
   const app = document.getElementById("app");
@@ -4921,6 +5432,8 @@ async function boot(){
   await loadState();
   mergeSheetImport();
   renderShell();
+  syncFitnessLive();
+  syncFinancesLive();
   mountChat();
 }
 boot();
