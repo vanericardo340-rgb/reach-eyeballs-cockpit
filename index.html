@@ -45,6 +45,63 @@
   ::-webkit-scrollbar-track{ background:transparent; }
 
   .app{ display:flex; min-height:100vh; }
+  /* ---------- Assistant ---------- */
+  .cc-chat-fab{ position:fixed; right:22px; bottom:22px; z-index:150; width:56px; height:56px; border-radius:50%; border:none; color:#fff; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(145deg,var(--accent),var(--accent2)); box-shadow:0 12px 28px -10px rgba(108,79,224,.55), 0 2px 6px rgba(23,22,31,.18); transition:transform .15s ease, box-shadow .15s ease; }
+  .cc-chat-fab:hover{ transform:translateY(-1px) scale(1.03); box-shadow:0 16px 34px -10px rgba(108,79,224,.6), 0 2px 6px rgba(23,22,31,.2); }
+  .cc-chat-fab svg{ width:24px; height:24px; }
+  .cc-chat{ position:fixed; right:22px; bottom:90px; z-index:150; width:380px; max-width:calc(100vw - 32px); height:min(580px, calc(100vh - 120px)); display:flex; flex-direction:column;
+    background:var(--bg-elevated); border:1px solid var(--border); border-radius:18px; box-shadow:0 28px 70px -24px rgba(23,22,31,.35); overflow:hidden; animation:ccChatIn .18s ease-out; }
+  .cc-chat[hidden]{ display:none; }
+  @keyframes ccChatIn{ from{ opacity:0; transform:translateY(8px) scale(.98); } to{ opacity:1; transform:none; } }
+  .cc-chat-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 12px 12px 16px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,var(--accent-soft),transparent); }
+  .cc-chat-title{ display:flex; align-items:center; gap:10px; }
+  .cc-chat-title b{ display:block; font-size:13.5px; }
+  .cc-chat-title small{ display:block; font-size:11px; color:var(--text-faint); }
+  .cc-chat-dot{ width:9px; height:9px; border-radius:50%; background:var(--good); box-shadow:0 0 0 3px var(--good-soft); }
+  .cc-chat-actions{ display:flex; gap:2px; }
+  .cc-chat-list{ flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .cc-msg{ max-width:88%; padding:9px 12px; border-radius:14px; font-size:13px; line-height:1.5; word-wrap:break-word; }
+  .cc-msg p{ margin:0 0 6px; } .cc-msg p:last-child{ margin-bottom:0; }
+  .cc-msg ul{ margin:4px 0 6px; padding-left:18px; } .cc-msg li{ margin:2px 0; }
+  .cc-msg code{ background:var(--surface-2); padding:1px 4px; border-radius:4px; font-size:12px; }
+  .cc-msg a{ color:var(--accent-strong); }
+  .cc-msg.user{ align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:5px; }
+  .cc-msg.assistant{ align-self:flex-start; background:var(--surface); border:1px solid var(--border-soft); border-bottom-left-radius:5px; }
+  .cc-msg.error{ background:var(--bad-soft); border-color:rgba(216,67,58,.25); color:var(--bad); }
+  .cc-typing{ display:inline-flex; gap:4px; padding:3px 0; } .cc-typing i{ width:6px; height:6px; border-radius:50%; background:var(--text-faint); animation:ccDot 1.2s infinite ease-in-out; }
+  .cc-typing i:nth-child(2){ animation-delay:.15s; } .cc-typing i:nth-child(3){ animation-delay:.3s; }
+  @keyframes ccDot{ 0%,80%,100%{ opacity:.3; transform:translateY(0); } 40%{ opacity:1; transform:translateY(-3px); } }
+  .cc-chat-empty{ margin:auto 0; text-align:center; color:var(--text-dim); display:flex; flex-direction:column; gap:6px; align-items:center; padding:10px; }
+  .cc-chat-empty b{ font-size:15px; color:var(--text); } .cc-chat-empty span{ font-size:12px; color:var(--text-faint); max-width:260px; }
+  .cc-chat-sugs{ display:flex; flex-direction:column; gap:6px; margin-top:10px; width:100%; }
+  .cc-chat-sug{ text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 11px; font-size:12.5px; color:var(--text); }
+  .cc-chat-sug:hover{ border-color:rgba(108,79,224,.35); background:var(--accent-soft); }
+  .cc-chat-form{ display:flex; align-items:flex-end; gap:8px; padding:10px; border-top:1px solid var(--border); }
+  .cc-chat-form textarea{ flex:1; resize:none; max-height:120px; min-height:38px; border-radius:12px; font-size:13px; line-height:1.4; padding:9px 11px; }
+  .cc-chat-send{ width:38px; height:38px; flex-shrink:0; border-radius:11px; border:none; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; }
+  .cc-chat-send:disabled{ opacity:.45; cursor:default; }
+  .cc-chat-send svg{ width:17px; height:17px; }
+  @media (max-width:600px){ .cc-chat{ right:16px; left:16px; width:auto; bottom:86px; } .cc-chat-fab{ right:16px; bottom:16px; } }
+
+  /* ---------- Collapsible sidebar ---------- */
+  .nav-toggle{ margin-left:auto; flex-shrink:0; }
+  .nav-toggle svg{ transition:transform .2s ease; }
+  .app.nav-collapsed .sidebar{ width:76px; }
+  .app.nav-collapsed .brand{ flex-direction:column; gap:8px; padding:18px 0 10px; }
+  .app.nav-collapsed .brand > div:not(.brand-mark){ display:none; }
+  .app.nav-collapsed .nav-toggle{ margin-left:0; }
+  .app.nav-collapsed .nav-toggle svg{ transform:rotate(180deg); }
+  .app.nav-collapsed nav.navlist{ padding:8px 10px; }
+  .app.nav-collapsed .navitem{ justify-content:center; padding:9px 0; position:relative; }
+  .app.nav-collapsed .navitem .t{ display:none; }
+  .app.nav-collapsed .navitem .badge-dot{ position:absolute; top:4px; right:6px; margin:0; }
+  .app.nav-collapsed .sidebar-foot .user-email, .app.nav-collapsed .sidebar-foot .storage-note{ display:none; }
+  .app.nav-collapsed .sidebar-foot{ display:flex; justify-content:center; padding:14px 0; }
+  .app.nav-collapsed .user-row{ margin:0; }
+  .sidebar{ transition:width .2s ease; }
+  @media (max-width:880px){ .nav-toggle{ display:none; } .app.nav-collapsed .sidebar{ width:100%; } .app.nav-collapsed .navitem .t{ display:flex; } }
+
   .login-screen{ width:100%; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); }
   .login-card{ width:320px; max-width:90vw; text-align:center; }
   .login-card h2{ margin:0 0 2px; font-size:19px; }
@@ -1480,8 +1537,11 @@ let uiState = {
 };
 
 /* ============================= RENDER SHELL ============================= */
+let navCollapsed = false;
+try{ navCollapsed = localStorage.getItem("cockpit_nav_collapsed") === "1"; }catch(e){}
 function renderShell(){
   const app = document.getElementById("app");
+  app.classList.toggle("nav-collapsed", navCollapsed);
   app.innerHTML = `
     <aside class="sidebar">
       <div class="brand">
@@ -1490,10 +1550,11 @@ function renderShell(){
           <div class="brand-name">Reach Eyeballs</div>
           <div class="brand-sub">Cockpit</div>
         </div>
+        <button type="button" class="icon-btn nav-toggle" id="navToggle" aria-label="${navCollapsed?"Expand sidebar":"Collapse sidebar"}" title="${navCollapsed?"Expand sidebar":"Collapse sidebar"}" aria-expanded="${!navCollapsed}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
       </div>
       <nav class="navlist" id="navlist">
         ${NAV.map(n=>`
-          <button class="navitem ${activeView===n.id?"active":""}" data-nav="${n.id}">
+          <button class="navitem ${activeView===n.id?"active":""}" data-nav="${n.id}" title="${n.label}" aria-label="${n.label}">
             <span class="nav-ic" style="background:${n.chip}1f;color:${n.chip}">${icon(n.icon)}</span>
             <span class="t"><b>${n.label}</b><span>${n.sub}</span></span>
             <span class="badge-dot" id="navbadge-${n.id}" style="display:none"></span>
@@ -1516,6 +1577,11 @@ function renderShell(){
   });
   document.getElementById("exportAllBtn").addEventListener("click", exportAllJSON);
   document.getElementById("logoutBtn").addEventListener("click", logout);
+  document.getElementById("navToggle").addEventListener("click", ()=>{
+    navCollapsed = !navCollapsed;
+    try{ localStorage.setItem("cockpit_nav_collapsed", navCollapsed ? "1" : "0"); }catch(e){}
+    renderShell();
+  });
   renderView();
   updateNavBadges();
 }
@@ -4658,6 +4724,159 @@ function fallbackDownload(data){
   URL.revokeObjectURL(url);
 }
 
+/* ============================= ASSISTANT (chat) =============================
+   Round button bottom-right; opens a small chat window. Replies come from
+   /api/chat (Claude), which receives a read-only snapshot of the dashboard. */
+const CHAT_KEY = "cockpit_chat_v1";
+const CHAT_SUGGESTIONS = ["What should I focus on next?", "Summarise my day so far", "Draft a follow-up for my most overdue lead"];
+let chatHistory = [];
+try{ chatHistory = JSON.parse(localStorage.getItem(CHAT_KEY) || "[]"); }catch(e){ chatHistory = []; }
+let chatBusy = false;
+
+function chatEsc(s){ return String(s).replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+/* Small, safe markdown subset: bold, italics, inline code, links, bullet lists. */
+function chatFormat(text){
+  const lines = chatEsc(text).split("\n");
+  let html = "", inList = false;
+  for(const raw of lines){
+    let l = raw.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/(^|[^*])\*([^*]+)\*/g,"$1<i>$2</i>").replace(/`([^`]+)`/g,"<code>$1</code>")
+      .replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    const m = l.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)$/);
+    if(m){ if(!inList){ html += "<ul>"; inList = true; } html += `<li>${m[1]}</li>`; continue; }
+    if(inList){ html += "</ul>"; inList = false; }
+    html += l.trim() ? `<p>${l}</p>` : "";
+  }
+  if(inList) html += "</ul>";
+  return html;
+}
+function chatSave(){ try{ localStorage.setItem(CHAT_KEY, JSON.stringify(chatHistory.slice(-40))); }catch(e){} }
+
+/* Read-only snapshot of the dashboard for the assistant. */
+function chatContext(){
+  const out = [];
+  const now = new Date();
+  out.push(`Now: ${now.toLocaleString(undefined,{ weekday:"long", day:"numeric", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" })}`);
+  try{
+    const active = state.clients.filter(c=>c.status==="active");
+    out.push(`\nClients (${state.clients.length}, ${active.length} active):`);
+    state.clients.slice(0,40).forEach(c=>out.push(`- ${c.company||"?"}${c.contact?` (${c.contact})`:""} · ${c.status||""}${c.model?` · ${c.model}`:""}${c.runRate?` · run rate ${c.runRate}`:""}${c.nextAction?` · next: ${c.nextAction}`:""}`));
+    const fu = (typeof needsFollowUp==="function") ? needsFollowUp("all") : [];
+    if(fu.length){ out.push(`\nClient-ads leads needing follow-up (${fu.length}):`); fu.slice(0,15).forEach(l=>out.push(`- ${l.leadName} · ${l.outcome} · ${l.date}`)); }
+    const fit = [...state.fitnessLog].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7);
+    if(fit.length){ out.push(`\nFitness (latest 7 days):`); fit.forEach(f=>out.push(`- ${f.date}: ${f.weight!=null?f.weight+"kg":"—"}, ${f.calories!=null?f.calories+" kcal":"—"}${f.protein!=null?`, ${f.protein}g protein`:""}`)); }
+  }catch(e){}
+  try{
+    const cc = JSON.parse(localStorage.getItem("command-centre:state:v1") || "null");
+    if(cc){
+      const d = new Date(), today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      const tasks = (cc.tasks||[]).filter(t=>t.date===today);
+      out.push(`\nDaily Command Centre — today's tasks:`);
+      ["morning","afternoon","evening"].forEach(sec=>{
+        const list = tasks.filter(t=>t.section===sec);
+        if(list.length) out.push(`${sec}: ` + list.map(t=>`${t.done?"[x]":"[ ]"} ${t.title}${t.kind==="priority"?" (priority)":""}${t.deadline?` by ${t.deadline}`:""}`).join("; "));
+      });
+      const meetings = (cc.meetings||[]).filter(m=>m.date===today).sort((a,b)=>a.start.localeCompare(b.start));
+      if(meetings.length) out.push(`Meetings today: ` + meetings.map(m=>`${m.start} ${m.title}${m.attendee?` with ${m.attendee}`:""}${m.completed?" (done)":""}`).join("; "));
+      const leads = (cc.leads||[]).filter(l=>l.status==="open").sort((a,b)=>(a.nextFollowUp||"9").localeCompare(b.nextFollowUp||"9")).slice(0,20);
+      if(leads.length){ out.push(`Open leads (by next follow-up):`); leads.forEach(l=>out.push(`- ${l.name}${l.company?` (${l.company})`:""} · ${l.temperature} · ${l.stage} · next follow-up ${l.nextFollowUp ? l.nextFollowUp.replace("T"," ") : "not set"}${l.nextAction?` · ${l.nextAction}`:""}${l.phone?` · ${l.phone}`:""}${l.email?` · ${l.email}`:""}`)); }
+      const eod = new Set((cc.eodDone||{})[today]||[]);
+      if((cc.settings||{}).eodChecklist) out.push(`EOD checklist: ` + cc.settings.eodChecklist.map(i=>`${eod.has(i.id)?"[x]":"[ ]"} ${i.label}`).join("; "));
+      const rec = (cc.recaps||{})[today];
+      if(rec && rec.reviewed) out.push(`EOD report submitted today. Tomorrow's #1 priority: ${rec.tomorrowPriority||"—"}`);
+      const st = cc.stats||{};
+      if(st.weight) out.push(`Weight goal: target ${st.weight.target}kg.`);
+      if(st.money && st.money.entries && st.money.entries.length) out.push(`Savings: ${st.money.entries[st.money.entries.length-1].amount} of ${st.money.goal} ${st.money.currency}.`);
+    }
+  }catch(e){}
+  return out.join("\n");
+}
+
+function chatRender(){
+  const list = document.getElementById("ccChatList");
+  if(!list) return;
+  if(!chatHistory.length){
+    list.innerHTML = `<div class="cc-chat-empty"><b>Hi! How can I help today?</b><span>I can see your dashboard: tasks, meetings, leads, clients and fitness.</span>
+      <div class="cc-chat-sugs">${CHAT_SUGGESTIONS.map(s=>`<button type="button" class="cc-chat-sug">${chatEsc(s)}</button>`).join("")}</div></div>`;
+    list.querySelectorAll(".cc-chat-sug").forEach(b=>b.addEventListener("click", ()=>chatSend(b.textContent)));
+    return;
+  }
+  list.innerHTML = chatHistory.map(m=>`<div class="cc-msg ${m.role}${m.error?" error":""}">${m.role==="assistant" ? (m.content ? chatFormat(m.content) : '<span class="cc-typing"><i></i><i></i><i></i></span>') : `<p>${chatEsc(m.content)}</p>`}</div>`).join("");
+  list.scrollTop = list.scrollHeight;
+}
+
+async function chatSend(text){
+  text = (text||"").trim();
+  if(!text || chatBusy) return;
+  chatBusy = true;
+  chatHistory.push({ role:"user", content:text });
+  const reply = { role:"assistant", content:"" };
+  chatHistory.push(reply);
+  chatRender();
+  const input = document.getElementById("ccChatInput"); if(input){ input.value = ""; input.style.height = ""; }
+  const sendBtn = document.getElementById("ccChatSend"); if(sendBtn) sendBtn.disabled = true;
+  try{
+    const { data: { session } } = await sb.auth.getSession();
+    if(!session) throw new Error("Sign in to the Cockpit first.");
+    const res = await fetch("/api/chat", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", Authorization:`Bearer ${session.access_token}` },
+      body: JSON.stringify({ messages: chatHistory.filter(m=>!m.error && m!==reply).map(({role,content})=>({role,content})), context: chatContext() }),
+    });
+    if(!res.ok){ const j = await res.json().catch(()=>({})); throw new Error(j.error || `The assistant couldn’t answer (status ${res.status}).`); }
+    const reader = res.body.getReader(); const dec = new TextDecoder();
+    for(;;){ const { done, value } = await reader.read(); if(done) break; reply.content += dec.decode(value, { stream:true }); chatRender(); }
+    if(!reply.content.trim()) throw new Error("The assistant didn’t reply. Try again.");
+  }catch(e){
+    reply.content = e.message || "Something went wrong."; reply.error = true;
+  }finally{
+    chatBusy = false; chatSave(); chatRender();
+    if(sendBtn) sendBtn.disabled = false;
+    const i = document.getElementById("ccChatInput"); if(i) i.focus();
+  }
+}
+
+function setChatOpen(open){
+  const panel = document.getElementById("ccChat"), fab = document.getElementById("ccChatFab");
+  if(!panel || !fab) return;
+  panel.hidden = !open;
+  fab.setAttribute("aria-expanded", String(open));
+  fab.innerHTML = open ? icon("x") : CHAT_ICON;
+  fab.setAttribute("aria-label", open ? "Close assistant" : "Open assistant");
+  if(open){ chatRender(); setTimeout(()=>{ const i=document.getElementById("ccChatInput"); if(i) i.focus(); }, 30); }
+}
+const CHAT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>`;
+
+function mountChat(){
+  if(document.getElementById("ccChatFab")) return;
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `
+    <button type="button" class="cc-chat-fab" id="ccChatFab" aria-controls="ccChat" aria-expanded="false" aria-label="Open assistant">${CHAT_ICON}</button>
+    <section class="cc-chat" id="ccChat" role="dialog" aria-label="Assistant" hidden>
+      <header class="cc-chat-head">
+        <div class="cc-chat-title"><span class="cc-chat-dot"></span><div><b>Assistant</b><small>Knows your dashboard · read-only</small></div></div>
+        <div class="cc-chat-actions">
+          <button type="button" class="icon-btn" id="ccChatNew" title="New chat" aria-label="Start a new chat">${icon("plus")}</button>
+          <button type="button" class="icon-btn" id="ccChatMin" title="Minimise" aria-label="Minimise assistant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 12h12"/></svg></button>
+        </div>
+      </header>
+      <div class="cc-chat-list" id="ccChatList" aria-live="polite"></div>
+      <form class="cc-chat-form" id="ccChatForm">
+        <textarea id="ccChatInput" rows="1" placeholder="Ask anything about your day…" aria-label="Message the assistant"></textarea>
+        <button type="submit" class="cc-chat-send" id="ccChatSend" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+      </form>
+    </section>`;
+  document.body.appendChild(wrap);
+  document.getElementById("ccChatFab").addEventListener("click", ()=>setChatOpen(document.getElementById("ccChat").hidden));
+  document.getElementById("ccChatMin").addEventListener("click", ()=>setChatOpen(false));
+  document.getElementById("ccChatNew").addEventListener("click", ()=>{ if(chatBusy) return; chatHistory = []; chatSave(); chatRender(); });
+  const input = document.getElementById("ccChatInput");
+  input.addEventListener("input", ()=>{ input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 120) + "px"; });
+  input.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); chatSend(input.value); } });
+  document.getElementById("ccChatForm").addEventListener("submit", e=>{ e.preventDefault(); chatSend(input.value); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !document.getElementById("ccChat").hidden && !document.querySelector(".overlay")) setChatOpen(false); });
+}
+function unmountChat(){ const f=document.getElementById("ccChatFab"); if(f) f.parentElement.remove(); }
+
 /* ============================= INIT ============================= */
 function renderLogin(){
   const app = document.getElementById("app");
@@ -4690,6 +4909,7 @@ async function logout(){
   clearTimeout(saveTimer);
   syncAll();
   await sb.auth.signOut();
+  unmountChat();
   boot();
 }
 async function boot(){
@@ -4701,6 +4921,7 @@ async function boot(){
   await loadState();
   mergeSheetImport();
   renderShell();
+  mountChat();
 }
 boot();
 })();

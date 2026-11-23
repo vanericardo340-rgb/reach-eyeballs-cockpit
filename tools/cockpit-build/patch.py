@@ -109,5 +109,42 @@ boot();""", "init")
 for fn in ["function metaLoadOverview(force){", "function metaLoadClient(acct, force){", "function metaLoadChildren(acct, campaignId){"]:
     s = replace_once(s, fn, fn + "\n  if(!(window.claude && window.claude.mcp)) return;", fn)
 
+# 8. Assistant chat (bottom-right) and collapsible sidebar.
+here = pathlib.Path(__file__).parent
+chat_js = (here / "chat-widget.js").read_text()
+chat_css = (here / "chat-widget.css").read_text()
+s = replace_once(s, "  .app{ display:flex; min-height:100vh; }", "  .app{ display:flex; min-height:100vh; }\n" + chat_css, "chat css")
+s = replace_once(s, "/* ============================= INIT ============================= */", chat_js + "\n/* ============================= INIT ============================= */", "chat js")
+s = replace_once(s, "  renderShell();\n}\nboot();", "  renderShell();\n  mountChat();\n}\nboot();", "mount chat")
+s = replace_once(s, "  await sb.auth.signOut();\n  boot();", "  await sb.auth.signOut();\n  unmountChat();\n  boot();", "unmount chat")
+s = replace_once(s, """      <div class="brand">
+        <div class="brand-mark">RE</div>
+        <div>
+          <div class="brand-name">Reach Eyeballs</div>
+          <div class="brand-sub">Cockpit</div>
+        </div>
+      </div>""", """      <div class="brand">
+        <div class="brand-mark">RE</div>
+        <div>
+          <div class="brand-name">Reach Eyeballs</div>
+          <div class="brand-sub">Cockpit</div>
+        </div>
+        <button type="button" class="icon-btn nav-toggle" id="navToggle" aria-label="${navCollapsed?"Expand sidebar":"Collapse sidebar"}" title="${navCollapsed?"Expand sidebar":"Collapse sidebar"}" aria-expanded="${!navCollapsed}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      </div>""", "nav toggle button")
+s = replace_once(s, """            <span class="t"><b>${n.label}</b><span>${n.sub}</span></span>""", """            <span class="t"><b>${n.label}</b><span>${n.sub}</span></span>""", "nav item")
+s = replace_once(s, """          <button class="navitem ${activeView===n.id?"active":""}" data-nav="${n.id}">""", """          <button class="navitem ${activeView===n.id?"active":""}" data-nav="${n.id}" title="${n.label}" aria-label="${n.label}">""", "nav title")
+s = replace_once(s, "function renderShell(){\n  const app = document.getElementById(\"app\");", """let navCollapsed = false;
+try{ navCollapsed = localStorage.getItem("cockpit_nav_collapsed") === "1"; }catch(e){}
+function renderShell(){
+  const app = document.getElementById("app");
+  app.classList.toggle("nav-collapsed", navCollapsed);""", "nav state")
+s = replace_once(s, '  document.getElementById("logoutBtn").addEventListener("click", logout);\n', """  document.getElementById("logoutBtn").addEventListener("click", logout);
+  document.getElementById("navToggle").addEventListener("click", ()=>{
+    navCollapsed = !navCollapsed;
+    try{ localStorage.setItem("cockpit_nav_collapsed", navCollapsed ? "1" : "0"); }catch(e){}
+    renderShell();
+  });
+""", "nav toggle binding")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")

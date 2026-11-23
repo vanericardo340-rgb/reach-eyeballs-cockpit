@@ -1,0 +1,9 @@
+{
+  "name": "reach-eyeballs-cockpit",
+  "private": true,
+  "description": "Static Cockpit site plus server functions in api/ (Vercel).",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.6.0"
+  }
+}
