@@ -65,9 +65,60 @@ function chatContext(){
   return out.join("\n");
 }
 
+/* ---- Anthropic API key (saved to the user's account, used only by the server) ---- */
+let chatKeyState = null; /* null = unknown, "ok", "missing", "rejected" */
+async function chatAuthed(path, body){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) throw new Error("Sign in to the Cockpit first.");
+  const res = await fetch(path, { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${session.access_token}` }, body: JSON.stringify(body) });
+  const j = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(j.error || `Request failed (status ${res.status}).`);
+  return j;
+}
+async function chatCheckKey(){
+  if(chatKeyState) return;
+  try{ const r = await chatAuthed("/api/assistant-key", { action:"status" }); chatKeyState = r.connected ? "ok" : "missing"; }
+  catch(e){ chatKeyState = null; }
+  chatRender();
+}
+function chatKeyBox(){
+  return `<form class="cc-key" id="ccKeyForm">
+    <b>${chatKeyState==="rejected" ? "Your API key stopped working" : "Switch the assistant on"}</b>
+    <span>${chatKeyState==="rejected" ? "Anthropic rejected the saved key (revoked or out of credit). Paste a new one." : "Paste your Anthropic API key once. It’s checked with Anthropic, saved to your Cockpit account and only used by the server. It also powers the AI summaries of your EOD reports."}</span>
+    <input id="ccKeyInput" type="password" autocomplete="off" placeholder="sk-ant-…" aria-label="Anthropic API key" />
+    <button type="submit" class="cc-key-btn">Connect</button>
+    <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get a key at console.anthropic.com → API Keys ↗</a>
+    <em id="ccKeyMsg" role="status"></em>
+  </form>`;
+}
+function chatBindKeyBox(){
+  const f = document.getElementById("ccKeyForm"); if(!f) return;
+  f.onsubmit = async (e)=>{
+    e.preventDefault();
+    const input = document.getElementById("ccKeyInput"), msg = document.getElementById("ccKeyMsg"), btn = f.querySelector("button");
+    const key = (input.value||"").trim(); if(!key){ input.focus(); return; }
+    btn.disabled = true; btn.textContent = "Checking…"; msg.textContent = "";
+    try{
+      await chatAuthed("/api/assistant-key", { action:"connect", key });
+      chatKeyState = "ok";
+      // Drop the "not set up" error and re-ask the last question, if any.
+      const lastUser = [...chatHistory].reverse().find(m=>m.role==="user");
+      chatHistory = chatHistory.filter(m=>!m.error);
+      if(lastUser && chatHistory[chatHistory.length-1]===lastUser){ chatHistory.pop(); chatSave(); chatRender(); chatSend(lastUser.content); }
+      else { chatSave(); chatRender(); }
+      if(typeof toast==="function") toast("Assistant connected");
+    }catch(err){ msg.textContent = err.message; btn.disabled = false; btn.textContent = "Connect"; }
+  };
+}
+
 function chatRender(){
   const list = document.getElementById("ccChatList");
   if(!list) return;
+  if(chatKeyState==="missing" || chatKeyState==="rejected"){
+    list.innerHTML = chatKeyBox() + chatHistory.filter(m=>!m.error).map(m=>`<div class="cc-msg ${m.role}">${m.role==="assistant" ? chatFormat(m.content||"") : `<p>${chatEsc(m.content)}</p>`}</div>`).join("");
+    chatBindKeyBox();
+    return;
+  }
   if(!chatHistory.length){
     list.innerHTML = `<div class="cc-chat-empty"><b>Hi! How can I help today?</b><span>I can see your dashboard: tasks, meetings, leads, clients and fitness.</span>
       <div class="cc-chat-sugs">${CHAT_SUGGESTIONS.map(s=>`<button type="button" class="cc-chat-sug">${chatEsc(s)}</button>`).join("")}</div></div>`;
@@ -96,7 +147,11 @@ async function chatSend(text){
       headers:{ "Content-Type":"application/json", Authorization:`Bearer ${session.access_token}` },
       body: JSON.stringify({ messages: chatHistory.filter(m=>!m.error && m!==reply).map(({role,content})=>({role,content})), context: chatContext() }),
     });
-    if(!res.ok){ const j = await res.json().catch(()=>({})); throw new Error(j.error || `The assistant couldn’t answer (status ${res.status}).`); }
+    if(!res.ok){
+      const j = await res.json().catch(()=>({}));
+      if(j.code==="not_connected" || j.code==="key_rejected"){ chatKeyState = j.code==="key_rejected" ? "rejected" : "missing"; chatHistory = chatHistory.filter(m=>m!==reply); return; }
+      throw new Error(j.error || `The assistant couldn’t answer (status ${res.status}).`);
+    }
     const reader = res.body.getReader(); const dec = new TextDecoder();
     for(;;){ const { done, value } = await reader.read(); if(done) break; reply.content += dec.decode(value, { stream:true }); chatRender(); }
     if(!reply.content.trim()) throw new Error("The assistant didn’t reply. Try again.");
@@ -116,7 +171,7 @@ function setChatOpen(open){
   fab.setAttribute("aria-expanded", String(open));
   fab.innerHTML = open ? icon("x") : CHAT_ICON;
   fab.setAttribute("aria-label", open ? "Close assistant" : "Open assistant");
-  if(open){ chatRender(); setTimeout(()=>{ const i=document.getElementById("ccChatInput"); if(i) i.focus(); }, 30); }
+  if(open){ chatRender(); chatCheckKey(); setTimeout(()=>{ const i=document.getElementById("ccChatInput"); if(i) i.focus(); }, 30); }
 }
 const CHAT_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>`;
 

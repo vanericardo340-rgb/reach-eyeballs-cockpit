@@ -1,7 +1,8 @@
 // AI coaching summary of the user's EOD reports, like Google Forms' response
 // summaries but focused on what to improve. POST { entries } with the user's sign-in.
-// Needs ANTHROPIC_API_KEY in the Vercel project's environment variables.
+// Uses ANTHROPIC_API_KEY from Vercel, or the key the user saved in the Cockpit.
 const { requireUser, send, readJson } = require("./_auth");
+const { anthropicKey } = require("./_anthropic");
 const sdk = require("@anthropic-ai/sdk");
 const Anthropic = sdk.default || sdk;
 const { jsonSchemaOutputFormat } = require("@anthropic-ai/sdk/helpers/json-schema");
@@ -36,7 +37,8 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return send(res, 405, { error: "Use POST." });
   const user = await requireUser(req);
   if (!user) return send(res, 401, { error: "Sign in to the Cockpit first." });
-  if (!process.env.ANTHROPIC_API_KEY) return send(res, 503, { error: "AI summaries aren’t set up yet: add ANTHROPIC_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy." });
+  const k = await anthropicKey(req);
+  if (!k) return send(res, 503, { code: "not_connected", error: "AI summaries need your Anthropic API key. Open the Cockpit assistant (chat bubble, bottom-right) and add it there once." });
   let body;
   try { body = await readJson(req); } catch { return send(res, 400, { error: "Bad request." }); }
   const entries = (Array.isArray(body.entries) ? body.entries : []).slice(0, 400);
@@ -48,7 +50,7 @@ module.exports = async (req, res) => {
   ).join("\n\n---\n\n");
 
   try {
-    const client = new Anthropic();
+    const client = new Anthropic({ apiKey: k.key });
     const msg = await client.beta.messages.parse({
       model: "claude-opus-5-5",
       max_tokens: 16000,

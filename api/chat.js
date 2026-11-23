@@ -1,7 +1,8 @@
 // Cockpit assistant: streams Claude's reply as plain text.
 // POST { messages: [{role, content}], context } with the user's Supabase sign-in.
-// Needs ANTHROPIC_API_KEY set in the Vercel project's environment variables.
+// Uses ANTHROPIC_API_KEY from Vercel, or the key the user saved in the Cockpit.
 const { requireUser, send, readJson } = require("./_auth");
+const { anthropicKey } = require("./_anthropic");
 const sdk = require("@anthropic-ai/sdk");
 const Anthropic = sdk.default || sdk;
 
@@ -17,9 +18,8 @@ module.exports = async (req, res) => {
   if (req.method !== "POST") return send(res, 405, { error: "Use POST." });
   const user = await requireUser(req);
   if (!user) return send(res, 401, { error: "Sign in to the Cockpit first." });
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return send(res, 503, { error: "The assistant isn’t set up yet: add ANTHROPIC_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy." });
-  }
+  const k = await anthropicKey(req);
+  if (!k) return send(res, 503, { code: "not_connected", error: "Add your Anthropic API key to switch the assistant on." });
   let body;
   try {
     body = await readJson(req);
@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
   if (!history.length || history[history.length - 1].role !== "user") return send(res, 400, { error: "Send a message first." });
   const context = typeof body.context === "string" ? body.context.slice(0, 40000) : "";
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey: k.key });
   res.statusCode = 200;
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -62,11 +62,11 @@ module.exports = async (req, res) => {
   } catch (e) {
     const status = e && e.status;
     const msg =
-      status === 401 ? "The Anthropic API key in Vercel was rejected. Check ANTHROPIC_API_KEY." :
+      status === 401 ? "Your Anthropic API key was rejected (revoked or out of credit?). Add a new one." :
       status === 429 ? "Too many requests right now. Try again in a moment." :
       status >= 500 ? "Claude is having trouble right now. Try again in a moment." :
       "Something went wrong talking to Claude.";
-    if (!res.headersSent) return send(res, 502, { error: msg });
+    if (!res.headersSent) return send(res, status === 401 ? 503 : 502, { error: msg, code: status === 401 ? "key_rejected" : undefined });
     res.write(`\n\n(${msg})`);
     res.end();
   }
