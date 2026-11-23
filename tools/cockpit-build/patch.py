@@ -238,5 +238,49 @@ async function syncFinancesLive(){
 
 /* ============================= INIT ============================= */""", "live sync functions")
 
+# 10. Finances: discover the month tabs automatically (via /api/sheet) instead of
+#     a hard-coded gid list, and read each tab through the server.
+s = replace_once(s, 'const FINANCE_MONTH_GIDS = { "2026-08": "244576783" };', """const FINANCE_MONTH_GIDS = { "2026-08": "244576783", "2026-09": "766123365", "2026-10": "40564415" };
+const FIN_MONTHS = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+/* "August", "Aug 2026", "September '26" → "2026-08". A tab without a year is
+   taken as the nearest such month: up to one month ahead, or the last ten. */
+function finTabMonthKey(name){
+  const n = String(name||"").trim().toLowerCase();
+  const mi = FIN_MONTHS.findIndex(m=>n.startsWith(m) || new RegExp("^"+m.slice(0,3)+"\\\\b").test(n));
+  if(mi<0) return null;
+  const y4 = n.match(/(20\\d{2})/), y2 = n.match(/'(\\d{2})\\b/);
+  const now = new Date();
+  let year = y4 ? +y4[1] : y2 ? 2000 + +y2[1] : now.getFullYear();
+  if(!y4 && !y2){
+    const diff = mi - now.getMonth();
+    if(diff > 1) year -= 1; else if(diff < -10) year += 1;
+  }
+  return `${year}-${String(mi+1).padStart(2,"0")}`;
+}
+async function finApi(body){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) throw new Error("not signed in");
+  const res = await fetch("/api/sheet", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${session.access_token}` }, body: JSON.stringify(Object.assign({ url:`https://docs.google.com/spreadsheets/d/${FINANCE_SHEET_ID}/edit` }, body)) });
+  const j = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(j.error || ("status "+res.status));
+  return j;
+}
+async function finDiscoverMonths(){
+  try{
+    const { tabs } = await finApi({ mode:"tabs" });
+    (tabs||[]).forEach(t=>{ const mk = finTabMonthKey(t.name); if(mk) FINANCE_MONTH_GIDS[mk] = String(t.gid); });
+  }catch(e){ console.warn("finance tab discovery failed", e); }
+}""", "finance month discovery")
+s = replace_once(s, """  const url = `https://docs.google.com/spreadsheets/d/${FINANCE_SHEET_ID}/export?format=csv&gid=${gid}`;
+  const res = await fetch(url, { cache:"no-store" });
+  if(!res.ok) throw new Error("finance sheet fetch failed: "+res.status);
+  const rows = parseCSV(await res.text());
+  return parseFinanceSheetRows(rows)""", """  const { rows } = await finApi({ mode:"csv", gid });
+  return parseFinanceSheetRows(rows)""", "finance month via api")
+s = replace_once(s, """async function fetchFinanceSheetLive(){
+  const results""", """async function fetchFinanceSheetLive(){
+  await finDiscoverMonths();
+  const results""", "finance discover before fetch")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")

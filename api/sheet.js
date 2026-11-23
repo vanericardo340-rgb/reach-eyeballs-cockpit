@@ -106,6 +106,25 @@ module.exports = async (req, res) => {
   if (!id) return send(res, 400, { error: "Use a Google Sheets link (https://docs.google.com/spreadsheets/…)." });
   const linkGid = (url.match(/[#&?]gid=(\d+)/) || [])[1];
 
+  // Raw access used by the Finances tab: list tabs, or return one tab's cells.
+  if (body.mode === "tabs") {
+    const tabs = await listTabs(id[1]).catch(() => []);
+    return send(res, 200, { tabs });
+  }
+  if (body.mode === "csv") {
+    const gid = String(body.gid || linkGid || "0");
+    if (!/^\d+$/.test(gid)) return send(res, 400, { error: "Bad tab id." });
+    try {
+      const r = await fetch(`https://docs.google.com/spreadsheets/d/${id[1]}/export?format=csv&gid=${gid}`, { redirect: "follow" });
+      if (!r.ok) return send(res, 502, { error: `The sheet couldn’t be read (status ${r.status}).` });
+      const text = await r.text();
+      if (/^\s*<!doctype html|<html/i.test(text)) return send(res, 502, { error: "The sheet isn’t shared publicly." });
+      return send(res, 200, { rows: parseCSV(text) });
+    } catch {
+      return send(res, 502, { error: "Google Sheets couldn’t be reached." });
+    }
+  }
+
   try {
     // Read every month tab (the tracker keeps one per month), plus the linked tab.
     const tabs = await listTabs(id[1]).catch(() => []);
