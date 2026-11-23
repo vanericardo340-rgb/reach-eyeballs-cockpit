@@ -4,6 +4,7 @@
 // Centre settings), or can be passed as `token`.
 //   today    { endOfDay }                 open tasks due by end of today
 //   all      {}                           every open task + list statuses + lead fields
+//   leads    {}                           just the Leads list: leads, statuses and custom fields
 //   update   { taskId, changes }          status / name / due / priority
 //   complete { taskId, done }             tick or untick using the list’s own statuses
 //   field    { taskId, fieldId, value }   set (or clear, value null) a custom field
@@ -91,6 +92,41 @@ async function allTasks(token, query) {
   return { me, tasks: tasks.filter((t) => !t.assignees.length || t.assignees.includes(me.id)) };
 }
 
+/** Finds the list named "Leads" (or containing "lead") anywhere in the workspace. */
+async function findLeadsList(token) {
+  const { teams } = await cu("/team", token);
+  const found = [];
+  for (const team of teams || []) {
+    const { spaces = [] } = await cu(`/team/${team.id}/space?archived=false`, token).catch(() => ({ spaces: [] }));
+    for (const s of spaces) {
+      const [{ lists: loose = [] }, { folders = [] }] = await Promise.all([
+        cu(`/space/${s.id}/list?archived=false`, token).catch(() => ({ lists: [] })),
+        cu(`/space/${s.id}/folder?archived=false`, token).catch(() => ({ folders: [] })),
+      ]);
+      loose.forEach((l) => found.push(l));
+      folders.forEach((f) => (f.lists || []).forEach((l) => found.push(l)));
+    }
+  }
+  return found.find((l) => /^leads?$/i.test(l.name.trim())) || found.find((l) => /lead/i.test(l.name)) || null;
+}
+
+async function leadsData(token, listId) {
+  const [l, { fields = [] }] = await Promise.all([cu(`/list/${listId}`, token), cu(`/list/${listId}/field`, token).catch(() => ({ fields: [] }))]);
+  const leads = [];
+  for (let page = 0; page < 5; page++) {
+    const q = new URLSearchParams({ page: String(page), subtasks: "false", include_closed: "true", order_by: "updated" });
+    const { tasks: batch = [], last_page } = await cu(`/list/${listId}/task?${q}`, token);
+    batch.forEach((t) => leads.push(mapTask(t, {})));
+    if (last_page !== false || batch.length < 100) break;
+  }
+  return {
+    leadsListId: listId,
+    statuses: (l.statuses || []).map((s) => ({ status: s.status, color: s.color, type: s.type })),
+    leadFields: fields.map((f) => ({ id: f.id, name: f.name, type: f.type, options: ((f.type_config && f.type_config.options) || []).map((o) => ({ id: o.id, name: o.name, color: o.color, orderindex: o.orderindex })) })),
+    leads,
+  };
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") return send(res, 405, { error: "Use POST." });
   const user = await requireUser(req);
@@ -131,6 +167,12 @@ module.exports = async (req, res) => {
       const { me, tasks } = await allTasks(token, { due_date_lt: String(endOfDay) });
       tasks.sort((a, b) => (a.due || 0) - (b.due || 0));
       return send(res, 200, { connected: true, tasks, user: me.username, fetchedAt: new Date().toISOString() });
+    }
+
+    if (action === "leads") {
+      const list = await findLeadsList(token);
+      if (!list) return send(res, 200, { connected: true, leadsListId: null, leads: [], leadFields: [], statuses: [] });
+      return send(res, 200, { connected: true, ...(await leadsData(token, list.id)) });
     }
 
     if (action === "all") {
