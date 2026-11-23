@@ -194,21 +194,33 @@ function parseCalendar(text) {
 }
 
 /* ---------- meeting or personal block? ----------
-   A meeting has other people: guests on the invite, a video-call link, or a
-   name that reads like a meeting ("Reunião com…", "Call with Ash",
-   "Vanessa x Ash", "Discovery call"). Time blocks you put in for yourself
-   ("Build website", "Gym") are left out of Today's meetings. */
-const MEETING_WORDS = /\b(reuni[aã]o|reuniao|meeting|mtg|call|chamada|liga[cç][aã]o|zoom|google meet|teams|sync|catch[- ]?up|check[- ]?in|stand[- ]?up|standup|demo|discovery|consult(ation)?|onboarding|kick[- ]?off|interview|entrevista|1[:-]1|one[- ]on[- ]one|pitch|presentation|apresenta[cç][aã]o|webinar|coffee|caf[eé]|lunch with|almo[cç]o com|jantar com|dinner with|appointment|consulta)\b/i;
-const WITH_SOMEONE = /(\bwith\s+[A-Z\u00C0-\u017F]|\bw\/\s*\S|\bcom\s+(o |a |os |as )?[A-Z\u00C0-\u017F]|\S\s+(x|<>|&|\/|vs\.?|\+)\s+[A-Z\u00C0-\u017F]|\b(and|e)\s+[A-Z\u00C0-\u017F][a-z\u00C0-\u017F]+\s*$)/;
+   A meeting has other people. The strongest signs are guests on the invite or
+   a video-call link. Without those, the name has to read like a meeting
+   with someone: "Reunião com João", "Call with Ash", "Vanessa x Ash",
+   "Discovery call", "Almoço com Maria". Work blocks you put in for yourself
+   ("📞 Call / Follow up w/ client leads / Fill EOD report + Plan next day",
+   "Build website", "Gym") are left out, even when they mention calls. */
+const STRONG_WORDS = /\b(reuni[aã]o|reuniao|meeting|mtg|entrevista|interview|demo|discovery|onboarding|kick[- ]?off|webinar|apresenta[cç][aã]o|presentation|consulta|consultation|appointment)\b/i;
+const SOCIAL_WITH = /\b(lunch|dinner|coffee|drinks|almo[cç]o|jantar|caf[eé])\s+(with|w\/|com)\b/i;
+const NAMED = "[A-ZÀ-Ý][\\wÀ-ſ'-]+";
+// "call with Ash", "sync w/ Blain", "chamada com o João", "Vanessa x Ash", "Ash <> Vanessa"
+const WITH_PERSON = new RegExp(`(\\bwith\\s+|\\bw\\/\\s*|\\bcom\\s+(?:o |a |os |as )?)${NAMED}|^\\W*${NAMED}(\\s+${NAMED})?\\s+(x|<>|&|vs\\.?)\\s+${NAMED}`);
+// Words that mean the person is generic, not someone specific.
+const GENERIC_PEOPLE = /\b(with|w\/|com)\s+(the\s+|my\s+|o\s+|a\s+)?(clients?|leads?|prospects?|team|everyone|customers?|clientes?)\b/i;
+// Things that read like a personal work block.
+const BLOCK_WORDS = /\b(follow[- ]?ups?|leads|eod|end of day|plan(ning)? (the )?(next )?(day|week)|outreach|cold calls?|calls block|power hour|admin|inbox|emails?|deep work|focus|block|prospecting|dms?|content|edit(ing)?|gym|workout|treino|lunch break|errands?|study|estudar|review|reporting|batch)\b/i;
 function classify(ev, owner) {
   const title = ev.props.SUMMARY ? unescapeText(ev.props.SUMMARY.value) : "";
   const organizer = ev.props.ORGANIZER ? ev.props.ORGANIZER.value.replace(/^mailto:/i, "").trim().toLowerCase() : null;
-  const others = (ev.attendees || []).filter((a) => !a.resource && a.email && a.email !== owner && !(owner === null && a.email === organizer));
-  // With no owner address, the organizer is assumed to be you; guests beyond them count.
-  const guests = owner ? others.filter((a) => a.email !== owner) : others;
+  const guests = (ev.attendees || []).filter((a) => !a.resource && a.email && a.email !== owner && a.email !== organizer && !/calendar\.google\.com$/.test(a.email));
   const link = findLink(ev);
   const conference = !!(link && /meet\.google|zoom\.us|teams\.(microsoft|live)|whereby/i.test(link)) || !!ev.props["X-GOOGLE-CONFERENCE"];
-  const byName = MEETING_WORDS.test(title) || WITH_SOMEONE.test(title);
+  const clean = title.replace(/[\u{1F000}-\u{1FFFF}☀-➿️]/gu, " ").replace(/\s+/g, " ").trim();
+  const listy = (clean.match(/\s\/\s|\s\+\s|,\s/g) || []).length >= 2; // "A / B / C", "A + B, C"
+  const looksLikeBlock = BLOCK_WORDS.test(clean) || listy || GENERIC_PEOPLE.test(clean);
+  const strong = STRONG_WORDS.test(clean) || SOCIAL_WITH.test(clean);
+  const withPerson = WITH_PERSON.test(clean) && !GENERIC_PEOPLE.test(clean);
+  const byName = (strong && !listy) || (withPerson && !looksLikeBlock) || (strong && withPerson);
   const meeting = guests.length > 0 || conference || byName;
   const why = guests.length ? "guests" : conference ? "video call" : byName ? "name" : null;
   return { meeting, why, guests: guests.slice(0, 12).map((g) => g.name || g.email.split("@")[0]) };
