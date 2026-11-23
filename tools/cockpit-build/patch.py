@@ -455,5 +455,14 @@ s = replace_once(s, "/* ============================= INIT =====================
 s = replace_once(s, '  else if(activeView==="fitness") host.innerHTML = viewFitness();', '  else if(activeView==="fitness") host.innerHTML = viewHealth();', "route health")
 s = replace_once(s, "  if(activeView===\"tasks\") tkBind();", "  if(activeView===\"tasks\") tkBind();\n  if(activeView===\"fitness\") hdBind();", "bind health")
 
+# 14. Daily Workflow tab: the "Daily Workflow" Google Doc, tickable day by day.
+wf_js = (here / "workflow-tab.js").read_text()
+wf_css = (here / "workflow-tab.css").read_text()
+s = replace_once(s, "  .app{ display:flex; min-height:100vh; }", "  .app{ display:flex; min-height:100vh; }\n" + wf_css, "workflow css")
+s = replace_once(s, "/* ============================= INIT ============================= */", wf_js + "\n/* ============================= INIT ============================= */", "workflow js")
+s = replace_once(s, '  { id:"tasks", label:"Tasks"', '  { id:"workflow", label:"Daily Workflow", sub:"Your day, block by block", icon:"calendar", chip:"#1a73e8" },\n  { id:"tasks", label:"Tasks"', "nav workflow")
+s = replace_once(s, '  else if(activeView==="tasks") host.innerHTML = viewTasks();', '  else if(activeView==="tasks") host.innerHTML = viewTasks();\n  else if(activeView==="workflow") host.innerHTML = viewWorkflow();', "route workflow")
+s = replace_once(s, "  if(activeView===\"fitness\") hdBind();", "  if(activeView===\"fitness\") hdBind();\n  if(activeView===\"workflow\") wfBind();", "bind workflow")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
