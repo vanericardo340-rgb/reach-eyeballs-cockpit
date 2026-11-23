@@ -103,11 +103,101 @@ async function boot(){
 }
 boot();""", "init")
 
-# 7. Meta Ads: outside Claude there is no connector. The loaders would fail
-#    instantly, re-render, and retry forever (freezing the tab), so skip live
-#    lookups and let the tab show the built-in Meta snapshot instead.
+# 7. Meta Ads: outside claude.ai there is no Meta connector, so the tab talks
+#    to /api/meta (the Cockpit server calls the Marketing API with the token
+#    saved to the user's account). Same request/response shape as the
+#    connector, so the rest of the tab is unchanged. Loaders stop once Meta is
+#    known to be unavailable, so failures can't re-render in a loop.
 for fn in ["function metaLoadOverview(force){", "function metaLoadClient(acct, force){", "function metaLoadChildren(acct, campaignId){"]:
-    s = replace_once(s, fn, fn + "\n  if(!(window.claude && window.claude.mcp)) return;", fn)
+    s = replace_once(s, fn, fn + "\n  if(metaLive===false) return;", fn)
+s = replace_once(s, """  const mcp = window.claude && window.claude.mcp;
+  if(!mcp){ return Promise.reject({ code:"capability_disabled" }); }
+  return metaSchedule(()=>mcp.callTool(META_SERVER, tool, args, { cache: force ? { staleTime:0, refresh:true } : { staleTime:300000 } }))""", """  const mcp = window.claude && window.claude.mcp;
+  const call = mcp ? ()=>mcp.callTool(META_SERVER, tool, args, { cache: force ? { staleTime:0, refresh:true } : { staleTime:300000 } }) : ()=>metaServer({ tool, args });
+  return metaSchedule(call)""", "meta invoke via server")
+s = replace_once(s, """  if(!(window.claude && window.claude.mcp)){ metaLive = false; return Promise.reject({ code:"capability_disabled" }); }
+""", "", "meta call no connector check")
+s = replace_once(s, 'const META_FATAL = ["not_granted",', 'const META_FATAL = ["not_connected","not_signed_in","not_granted",', "meta fatal codes")
+s = replace_once(s, """  if(code==="needs_reauth") return "Reconnect Meta Ads in claude.ai Settings → Connectors to load live data.";""", """  if(code==="not_connected") return "Connect Meta to load live ad data.";
+  if(code==="needs_reauth") return "Your Meta access token has expired or was revoked. Paste a new one to reload live data.";
+  if(code==="rate_limited") return "Meta is rate-limiting requests. Press Refresh in a minute.";""", "meta error text")
+s = replace_once(s, """hint:"Your Meta sign-in expired. Reconnect Meta Ads in claude.ai Settings → Connectors." };""", """hint:"Your Meta access token expired. Paste a new one at the top of Client Ads." };""", "meta reauth hint")
+s = replace_once(s, """  if(!metaAccounts || force) MetaData.accounts(force).then(metaRerender, metaRerender);
+  metaClients().forEach(c=>{ if(!metaDelivery[c.id] || force) MetaData.delivery(c.id, force).then(metaRerender, ()=>{}); });""", """  if((!metaAccounts && !metaTried.accounts) || force){ metaTried.accounts = true; MetaData.accounts(force).then(metaRerender, metaRerender); }
+  metaClients().forEach(c=>{ if((!metaDelivery[c.id] && !metaTried["d"+c.id]) || force){ metaTried["d"+c.id] = true; MetaData.delivery(c.id, force).then(metaRerender, metaRerender); } });""", "meta overview tried flags")
+s = replace_once(s, """  if(!metaAccounts) MetaData.accounts().then(metaRerender, ()=>{});
+  if(!metaDelivery[acct] || force) MetaData.delivery(acct, force).then(metaRerender, ()=>{});""", """  if(!metaAccounts && !metaTried.accounts){ metaTried.accounts = true; MetaData.accounts().then(metaRerender, metaRerender); }
+  if((!metaDelivery[acct] && !metaTried["d"+acct]) || force){ metaTried["d"+acct] = true; MetaData.delivery(acct, force).then(metaRerender, metaRerender); }""", "meta client tried flags")
+s = replace_once(s, """function mStatusNote(){
+""", """function mStatusNote(){
+  const code = metaError && metaError.code;
+  if(!(window.claude && window.claude.mcp) && (code==="not_connected" || code==="needs_reauth")) return metaConnectPanel(code);
+""", "meta connect panel hook")
+s = replace_once(s, "let metaAccounts = null;", """let metaAccounts = null;
+const metaTried = {};
+/* Server path (outside claude.ai): the Cockpit's /api/meta, with the user's sign-in. */
+async function metaServer(body){
+  const { data: { session } } = await sb.auth.getSession();
+  if(!session) throw { code:"not_signed_in", message:"Sign in to the Cockpit first." };
+  let res;
+  try{ res = await fetch("/api/meta", { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${session.access_token}` }, body: JSON.stringify(body) }); }
+  catch(e){ throw { code:"server_unavailable", message:"Network error", retryable:true }; }
+  const j = await res.json().catch(()=>({}));
+  if(!res.ok) throw { code:j.code || "server_unavailable", message:j.error || ("status "+res.status), retryable:!!j.retryable, retryAfterMs: j.retryable ? 20000 : undefined };
+  return j;
+}
+function metaResetLive(){
+  metaLive = null; metaError = null; metaAccounts = null;
+  Object.keys(metaCache).forEach(k=>delete metaCache[k]);
+  Object.keys(metaTried).forEach(k=>delete metaTried[k]);
+  Object.keys(metaDelivery).forEach(k=>delete metaDelivery[k]);
+  Object.keys(metaClientErr).forEach(k=>delete metaClientErr[k]);
+  Object.keys(metaState.overview).forEach(k=>delete metaState.overview[k]);
+  Object.keys(metaState.client).forEach(k=>delete metaState.client[k]);
+}
+function metaConnectPanel(code){
+  return `<div class="m-connect">
+    <div class="m-connect-h">${icon("target")} <b>${code==="needs_reauth" ? "Reconnect Meta" : "Connect Meta Ads"}</b></div>
+    <p>${code==="needs_reauth" ? "Your Meta access token has expired or was revoked. Paste a new one and the live numbers come back." : "Paste a Meta access token with <b>ads_read</b> permission. It’s saved to your Cockpit account and only used by the Cockpit’s server, never shown in the page."}</p>
+    <form id="metaConnectForm" class="m-connect-form">
+      <input id="metaToken" type="password" autocomplete="off" placeholder="EAA…" aria-label="Meta access token" />
+      <button class="m-btn primary" type="submit">Connect</button>
+    </form>
+    <details class="m-connect-how"><summary>How to get a token that doesn’t expire (recommended)</summary>
+      <ol>
+        <li>Go to <a href="https://business.facebook.com/settings/system-users" target="_blank" rel="noopener">Business settings → Users → System users</a> and click <b>Add</b>. Name it “Cockpit”, role <b>Employee</b>.</li>
+        <li>Click <b>Assign assets</b> → <b>Ad accounts</b>, tick every client account, and give <b>View performance</b> (or Manage campaigns).</li>
+        <li>Click <b>Generate new token</b>, pick any app you own (create a free one at <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a> if you have none, type “Business”), set expiry to <b>Never</b>, tick <b>ads_read</b> and generate.</li>
+        <li>Copy the token (starts with EAA) and paste it above.</li>
+      </ol>
+      <p>Quick test instead: <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API Explorer</a> → add the <b>ads_read</b> permission → Generate Access Token. That one lasts about an hour unless you extend it in the Access Token Debugger.</p>
+    </details>
+  </div>`;
+}
+document.addEventListener("submit", async (e)=>{
+  if(!e.target || e.target.id!=="metaConnectForm") return;
+  e.preventDefault();
+  const input = document.getElementById("metaToken"); const token = (input.value||"").trim();
+  if(!token){ input.focus(); return; }
+  const btn = e.target.querySelector("button"); btn.disabled = true; btn.textContent = "Connecting…";
+  try{
+    const r = await metaServer({ action:"connect", token });
+    toast(`Connected to Meta as ${r.user} · ${r.accounts} ad account${r.accounts===1?"":"s"}`);
+    metaResetLive(); metaRefreshCurrent();
+  }catch(err){ toast(err.message || "Meta didn’t accept that token."); btn.disabled = false; btn.textContent = "Connect"; }
+});""", "meta server layer")
+
+s = replace_once(s, "  .m-note.warn{", """  .m-connect{ background:#fff; border:1px solid #d6e2fd; border-radius:14px; padding:16px 18px; box-shadow:0 6px 20px -12px rgba(37,99,235,.35); }
+  .m-connect-h{ display:flex; align-items:center; gap:8px; font-size:14px; color:#1e3a8a; }
+  .m-connect-h svg{ width:16px; height:16px; }
+  .m-connect p{ font-size:12.5px; color:var(--text-dim); margin:6px 0 10px; line-height:1.5; }
+  .m-connect-form{ display:flex; gap:8px; flex-wrap:wrap; }
+  .m-connect-form input{ flex:1; min-width:220px; }
+  .m-btn.primary{ background:#2563EB; border-color:#2563EB; color:#fff; }
+  .m-connect-how{ margin-top:10px; font-size:12.5px; color:var(--text-dim); }
+  .m-connect-how summary{ cursor:pointer; font-weight:600; color:#1e3a8a; }
+  .m-connect-how ol{ margin:8px 0 6px 18px; line-height:1.7; }
+  .m-note.warn{""", "meta connect css")
 
 # 8. Assistant chat (bottom-right) and collapsible sidebar.
 here = pathlib.Path(__file__).parent
