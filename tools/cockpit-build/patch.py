@@ -357,5 +357,13 @@ s = replace_once(s, """async function fetchFinanceSheetLive(){
   await finDiscoverMonths();""", """async function fetchFinanceSheetLive(){
   if(Date.now() - FIN_DISCOVERED_AT > 300000){ await finDiscoverMonths(); FIN_DISCOVERED_AT = Date.now(); }""", "finance discover throttle")
 
+# 13. Fitness tab redesigned as a one-page health dashboard.
+health_js = (here / "health-tab.js").read_text()
+health_css = (here / "health-tab.css").read_text()
+s = replace_once(s, "  .app{ display:flex; min-height:100vh; }", "  .app{ display:flex; min-height:100vh; }\n" + health_css, "health css")
+s = replace_once(s, "/* ============================= INIT ============================= */", health_js + "\n/* ============================= INIT ============================= */", "health js")
+s = replace_once(s, '  else if(activeView==="fitness") host.innerHTML = viewFitness();', '  else if(activeView==="fitness") host.innerHTML = viewHealth();', "route health")
+s = replace_once(s, "  if(activeView===\"tasks\") tkBind();", "  if(activeView===\"tasks\") tkBind();\n  if(activeView===\"fitness\") hdBind();", "bind health")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
