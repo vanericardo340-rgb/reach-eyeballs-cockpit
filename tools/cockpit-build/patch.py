@@ -464,5 +464,14 @@ s = replace_once(s, '  { id:"tasks", label:"Tasks"', '  { id:"workflow", label:"
 s = replace_once(s, '  else if(activeView==="tasks") host.innerHTML = viewTasks();', '  else if(activeView==="tasks") host.innerHTML = viewTasks();\n  else if(activeView==="workflow") host.innerHTML = viewWorkflow();', "route workflow")
 s = replace_once(s, "  if(activeView===\"fitness\") hdBind();", "  if(activeView===\"fitness\") hdBind();\n  if(activeView===\"workflow\") wfBind();", "bind workflow")
 
+# 15. Favicon, home-screen icon and web app manifest (the "RE" brand mark).
+s = replace_once(s, "<title>Reach Eyeballs Cockpit</title>", """<title>Reach Eyeballs Cockpit</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+<link rel="alternate icon" href="/favicon.ico" sizes="any" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#6c4fe0" />""", "favicon")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
