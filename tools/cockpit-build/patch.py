@@ -473,7 +473,15 @@ s = replace_once(s, "</head><body>", """<title>Reach Eyeballs Cockpit</title>
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
 <meta name="theme-color" content="#6c4fe0" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Cockpit" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="application-name" content="Cockpit" />
 </head><body>""", "favicon in head")
+# Register the service worker (installable app + offline screen).
+s = replace_once(s, "/* ============================= INIT ============================= */", """if("serviceWorker" in navigator && location.protocol==="https:") window.addEventListener("load", ()=>navigator.serviceWorker.register("/sw.js").catch(e=>console.warn("service worker", e)));
+/* ============================= INIT ============================= */""", "service worker")
 
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
