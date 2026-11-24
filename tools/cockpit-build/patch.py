@@ -465,13 +465,15 @@ s = replace_once(s, '  else if(activeView==="tasks") host.innerHTML = viewTasks(
 s = replace_once(s, "  if(activeView===\"fitness\") hdBind();", "  if(activeView===\"fitness\") hdBind();\n  if(activeView===\"workflow\") wfBind();", "bind workflow")
 
 # 15. Favicon, home-screen icon and web app manifest (the "RE" brand mark).
-s = replace_once(s, "<title>Reach Eyeballs Cockpit</title>", """<title>Reach Eyeballs Cockpit</title>
+# The page arrives wrapped in a minimal <head>; icons only work from the head, so they go there.
+s = replace_once(s, "</head><body>", """<title>Reach Eyeballs Cockpit</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
 <link rel="alternate icon" href="/favicon.ico" sizes="any" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
-<meta name="theme-color" content="#6c4fe0" />""", "favicon")
+<meta name="theme-color" content="#6c4fe0" />
+</head><body>""", "favicon in head")
 
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
