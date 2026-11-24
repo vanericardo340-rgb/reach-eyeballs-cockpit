@@ -106,6 +106,9 @@
   .wf-must{ font-weight:800; }
   .wf-must-tag{ font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--c); border:1px solid color-mix(in srgb, var(--c) 35%, transparent); border-radius:20px; padding:1px 7px; }
   li.done .wf-must-tag{ display:none; }
+  .wf-btn{ display:inline-flex; align-items:center; gap:6px; margin-left:auto; font-size:12.5px; font-weight:700; color:#fff; background:linear-gradient(135deg,#7c3aed,#4f46e5); border-radius:20px; padding:5px 12px; text-decoration:none; box-shadow:0 6px 14px -8px #4f46e5; transition:transform .15s, box-shadow .15s; }
+  .wf-btn:hover{ transform:translateY(-1px); box-shadow:0 10px 18px -8px #4f46e5; }
+  .wf-btn svg{ width:13px; height:13px; }
   .wf-strong{ font-weight:700; }
   .wf-label{ font-weight:700; color:var(--text-dim); font-size:13px; }
   .wf-link{ display:inline-flex; align-items:center; gap:6px; color:#1d4ed8; font-weight:600; background:#eef4ff; border:1px solid #d6e2fd; border-radius:9px; padding:3px 10px; text-decoration:none; }
@@ -6753,6 +6756,7 @@ function hdBind(){
    (app_state "daily_workflow"). */
 const WF_DOC_URL = "https://docs.google.com/document/d/1Yq9quEaXRPoTHOmqt-C3yrCqd2V_XdWtI0u0_EOvHJo/edit";
 const WF_CALORIES = "https://docs.google.com/spreadsheets/d/1iCwTZE_tvxvSH6dZ_HIpqBgHZfFtU7y31zy9u4R8Rbc/edit?gid=1261861603#gid=1261861603";
+const WF_VISIONBOARD = "https://miro.com/app/board/uXjVHzqUhL0=/";
 const WF_EOD = "https://drive.google.com/open?id=1labEfX3TmJlsJVSXsSJ71_whiHctKBPkRx6v-qJNgQQ";
 const WF_PROSPECTING = [
   { t:"Call/Message Old Leads" },
@@ -6765,7 +6769,7 @@ const WF_PROSPECTING = [
 const WF_DOCS = [
   { id:"t1", tab:"Tab 1", blocks:[
     { id:"dawn", h:"DAWN - 4 am", from:"04:00", to:"07:00", icon:"sun", items:[
-      { t:"Read Visionboard 4:00 - 4:30" },
+      { t:"Read Visionboard 4:00 - 4:30", btn:{ href:WF_VISIONBOARD, label:"Open Visionboard" } },
       { t:"Read Book - 4:30 - 5:30" },
       { t:"Apply to Sales Calls 5:30 - 7:00" },
     ]},
@@ -6865,7 +6869,7 @@ function wfItems(items, depth){
     const on = !it.label && wfTicked(it.id);
     const body = it.link
       ? `<a class="wf-link" href="${esc(it.link)}" target="_blank" rel="noopener">${icon("link")} ${wfText(it)}</a>`
-      : `<span class="${it.b?"wf-must":it.b2?"wf-strong":it.label?"wf-label":""}">${wfText(it)}</span>${it.b?`<span class="wf-must-tag">Must do</span>`:""}`;
+      : `<span class="${it.b?"wf-must":it.b2?"wf-strong":it.label?"wf-label":""}">${wfText(it)}</span>${it.b?`<span class="wf-must-tag">Must do</span>`:""}${it.btn?`<a class="wf-btn" href="${esc(it.btn.href)}" target="_blank" rel="noopener">${icon("arrow")} ${esc(it.btn.label)}</a>`:""}`;
     return `<li class="${on?"done":""} ${it.label?"label":""} ${it.b?"must":""}">
       <div class="wf-line">
         ${it.label ? `<span class="wf-dot" aria-hidden="true"></span>` : `<button type="button" class="wf-check ${on?"on":""}" data-wf-tick="${it.id}" role="checkbox" aria-checked="${on}" aria-label="${esc(it.t)}">${icon("check")}</button>`}
