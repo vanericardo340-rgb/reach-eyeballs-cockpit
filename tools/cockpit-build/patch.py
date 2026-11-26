@@ -483,5 +483,88 @@ s = replace_once(s, "</head><body>", """<title>Reach Eyeballs Cockpit</title>
 s = replace_once(s, "/* ============================= INIT ============================= */", """if("serviceWorker" in navigator && location.protocol==="https:") window.addEventListener("load", ()=>navigator.serviceWorker.register("/sw.js").catch(e=>console.warn("service worker", e)));
 /* ============================= INIT ============================= */""", "service worker")
 
+# 16. Login: show-password toggle, clearer errors, "Forgot password?" and a
+#     set-new-password screen for the reset link.
+s = replace_once(s, """        <div class="field" style="margin-top:10px"><label for="loginPassword">Password</label><input type="password" id="loginPassword" autocomplete="current-password" /></div>
+        <div id="loginError" class="login-error" role="alert"></div>
+        <button class="btn primary" id="loginSubmit" style="width:100%;margin-top:14px;justify-content:center">Sign in</button>""", """        <div class="field" style="margin-top:10px"><label for="loginPassword">Password</label><div class="pw-wrap"><input type="password" id="loginPassword" autocomplete="current-password" /><button type="button" class="pw-eye" id="loginShow" aria-label="Show password">Show</button></div></div>
+        <div id="loginError" class="login-error" role="alert"></div>
+        <div id="loginInfo" class="login-info" role="status"></div>
+        <button class="btn primary" id="loginSubmit" style="width:100%;margin-top:14px;justify-content:center">Sign in</button>
+        <button type="button" class="login-link" id="loginForgot">Forgot password?</button>""", "login markup")
+s = replace_once(s, """    errEl.textContent = "";
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){ errEl.textContent = error.message; return; }
+    boot();
+  };
+  document.getElementById("loginSubmit").onclick = submit;""", """    errEl.textContent = ""; document.getElementById("loginInfo").textContent = "";
+    if(!email || !password){ errEl.textContent = "Enter your email and password."; return; }
+    const btn = document.getElementById("loginSubmit"); btn.disabled = true; btn.textContent = "Signing in…";
+    let error;
+    try{ ({ error } = await sb.auth.signInWithPassword({ email, password })); }
+    catch(e){ error = { message: "Couldn’t reach the sign-in service. Check your internet connection." }; }
+    btn.disabled = false; btn.textContent = "Sign in";
+    if(error){ errEl.textContent = loginErrorText(error.message); return; }
+    boot();
+  };
+  document.getElementById("loginSubmit").onclick = submit;
+  document.getElementById("loginShow").onclick = ()=>{ const i = document.getElementById("loginPassword"); const show = i.type==="password"; i.type = show ? "text" : "password"; document.getElementById("loginShow").textContent = show ? "Hide" : "Show"; };
+  document.getElementById("loginForgot").onclick = async ()=>{
+    const email = document.getElementById("loginEmail").value.trim();
+    const errEl = document.getElementById("loginError"), info = document.getElementById("loginInfo");
+    errEl.textContent = ""; info.textContent = "";
+    if(!email){ errEl.textContent = "Type your email above first, then click “Forgot password?” again."; document.getElementById("loginEmail").focus(); return; }
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: "https://reach-eyeballs-cockpit.vercel.app/" });
+    if(error){ errEl.textContent = /rate|seconds|limit/i.test(error.message) ? "A reset email was sent very recently. Wait a few minutes and try again." : error.message; return; }
+    info.textContent = "If that email has an account, a reset link is on its way. Open it on this computer (check spam too).";
+  };""", "login handlers")
+s = replace_once(s, "async function logout(){", """function loginErrorText(m){
+  if(/invalid login credentials/i.test(m)) return "That email and password don’t match. Check for typos, or use “Forgot password?” below.";
+  if(/email not confirmed/i.test(m)) return "Confirm your email first: open the link in the sign-up email.";
+  return m;
+}
+/* Opened from a password-reset email: choose a new password. */
+function renderSetPassword(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="login-screen">
+      <div class="login-card">
+        <div class="brand-mark" style="margin:0 auto 14px">RE</div>
+        <h2>Choose a new password</h2>
+        <div class="sub" style="margin-bottom:18px">At least 8 characters.</div>
+        <div class="field"><label for="newPw">New password</label><div class="pw-wrap"><input type="password" id="newPw" autocomplete="new-password" /><button type="button" class="pw-eye" id="newShow" aria-label="Show password">Show</button></div></div>
+        <div class="field" style="margin-top:10px"><label for="newPw2">Repeat it</label><input type="password" id="newPw2" autocomplete="new-password" /></div>
+        <div id="newErr" class="login-error" role="alert"></div>
+        <button class="btn primary" id="newSave" style="width:100%;margin-top:14px;justify-content:center">Save password and sign in</button>
+      </div>
+    </div>`;
+  document.getElementById("newShow").onclick = ()=>{ const i = document.getElementById("newPw"); const show = i.type==="password"; i.type = show ? "text" : "password"; document.getElementById("newPw2").type = i.type; document.getElementById("newShow").textContent = show ? "Hide" : "Show"; };
+  document.getElementById("newSave").onclick = async ()=>{
+    const a = document.getElementById("newPw").value, b2 = document.getElementById("newPw2").value, err = document.getElementById("newErr");
+    if(a.length < 8){ err.textContent = "Use at least 8 characters."; return; }
+    if(a !== b2){ err.textContent = "The two passwords don’t match."; return; }
+    const { error } = await sb.auth.updateUser({ password: a });
+    if(error){ err.textContent = error.message; return; }
+    __recovering = false;
+    history.replaceState(null, "", location.pathname);
+    toast("Password updated");
+    boot();
+  };
+}
+let __recovering = /type=recovery/.test(location.hash);
+sb.auth.onAuthStateChange((event)=>{ if(event==="PASSWORD_RECOVERY"){ __recovering = true; renderSetPassword(); } });
+async function logout(){""", "set password screen")
+s = replace_once(s, """  const { data: { session } } = await sb.auth.getSession();
+  if(!session){ renderLogin(); return; }""", """  const { data: { session } } = await sb.auth.getSession();
+  if(session && __recovering){ renderSetPassword(); return; }
+  if(!session){ renderLogin(); return; }""", "boot recovery")
+s = replace_once(s, "  .app{ display:flex; min-height:100vh; }", """  .app{ display:flex; min-height:100vh; }
+  .pw-wrap{ position:relative; }
+  .pw-wrap input{ width:100%; padding-right:58px; }
+  .pw-eye{ position:absolute; right:6px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:var(--accent-strong); font-weight:700; font-size:12px; cursor:pointer; padding:4px 8px; }
+  .login-info{ font-size:12.5px; color:var(--good); margin-top:8px; line-height:1.45; }
+  .login-info:empty{ display:none; }
+  .login-link{ display:block; margin:12px auto 0; border:0; background:none; color:var(--text-dim); font-size:12.5px; text-decoration:underline; cursor:pointer; }""", "login css")
+
 out_path.write_text(s)
 print("wrote", out_path, len(s), "bytes")
