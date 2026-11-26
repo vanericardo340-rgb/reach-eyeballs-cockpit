@@ -1,0 +1,8 @@
+{
+  "name": "cockpit-desktop",
+  "productName": "Cockpit",
+  "version": "1.0.0",
+  "description": "Reach Eyeballs Cockpit for macOS",
+  "main": "main.js",
+  "private": true
+}
